@@ -1,0 +1,3 @@
+{"type":"user","timestamp":"2026-11-17T09:00:00.000Z","message":{"role":"user","content":"synthetic prompt B"}}
+{"type":"assistant","timestamp":"2026-11-17T09:00:01.000Z","message":{"id":"msg_b1","model":"fake-model","stop_reason":"end_turn","usage":{"input_tokens":3,"output_tokens":2,"cache_read_input_tokens":0,"cache_creation_input_tokens":0},"content":[{"type":"text","text":"hi"}]}}
+{"type":"system","subtype":"stop_hook_summary","timestamp":"2026-11-17T09:00:02.000Z"}

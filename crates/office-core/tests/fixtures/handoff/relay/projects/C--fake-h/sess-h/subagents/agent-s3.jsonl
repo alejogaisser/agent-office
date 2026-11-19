@@ -1,0 +1,1 @@
+{"type":"assistant","timestamp":"2026-11-17T10:00:50.000Z","message":{"id":"msg_s3","stop_reason":"tool_use","content":[{"type":"tool_use","id":"toolu_rs3","name":"Read","input":{"file_path":"C:\\fake\\h\\x.txt"}}]}}

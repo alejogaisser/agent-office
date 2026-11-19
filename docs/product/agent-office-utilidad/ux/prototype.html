@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Office - prototipo del panel (maqueta descartable)</title>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #11141a; color: #e6e9ef; font: 13px/1.4 "Segoe UI", system-ui, sans-serif; }
+body { display: flex; flex-direction: column; overflow: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #8fb8e8; outline-offset: 2px; }
+code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+code { background: #11141a; border: 1px solid #333b4a; border-radius: 4px; padding: 1px 5px; word-break: break-all; }
+.muted { color: #8d97a8; }
+[hidden] { display: none !important; }
+
+/* ---------- simulador (no es parte del producto) ---------- */
+#simbar { flex: none; background: #2a1f3a; border-bottom: 1px solid #5a4a7a; font-size: 12px; max-height: 48vh; overflow: auto; }
+#simbar summary { padding: 6px 10px; cursor: pointer; color: #d9c8ff; font-weight: 600; }
+#simbar .grp { padding: 4px 10px 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-top: 1px solid #3d2f55; }
+#simbar .grp > b { color: #b9a6e6; font-weight: 600; margin-right: 4px; flex-basis: 100%; }
+#simbar button { background: #3a2c52; border: 1px solid #6a5a8c; border-radius: 5px; padding: 3px 8px; }
+#simbar button:hover { background: #4a3a68; }
+#simbar label { display: inline-flex; align-items: center; gap: 4px; color: #e6dcff; }
+#simbar select { background: #1e1530; color: #e6dcff; border: 1px solid #6a5a8c; border-radius: 4px; padding: 2px 4px; }
+
+/* ---------- escritorio de Windows simulado ---------- */
+#desktop { position: relative; flex: 1; min-height: 0; background: linear-gradient(135deg, #0c2340, #1c1240 60%, #301a4a); }
+#wallpaper { position: absolute; inset: 0 0 34px 0; display: flex; text-align: center; color: #9fb3d4; padding: 24px; overflow: auto; }
+#wallpaper .card { margin: auto; max-width: 520px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; padding: 16px 18px; }
+#taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: rgba(15,18,26,.95); border-top: 1px solid #333b4a; display: flex; align-items: center; gap: 8px; padding: 0 8px; z-index: 30; }
+#taskbar button { background: #2c3340; border: 1px solid #4a5568; border-radius: 5px; padding: 3px 10px; }
+#taskbar .sp, #titlebar .sp { flex: 1; }
+#toasts { position: absolute; right: 10px; bottom: 44px; display: flex; flex-direction: column; gap: 8px; z-index: 40; width: min(340px, calc(100% - 20px)); }
+.toast { background: #2b2f38; border: 1px solid #4a5160; border-radius: 8px; padding: 10px 12px; box-shadow: 0 6px 18px rgba(0,0,0,.5); color: #f2f4f8; text-align: left; width: 100%; }
+.toast .app { font-size: 11px; color: #aab3c2; display: flex; gap: 6px; align-items: center; }
+.toast .ttl { font-weight: 700; margin-top: 2px; }
+.toast .tag-sim { position: absolute; right: 8px; top: 6px; font-size: 10px; color: #8d97a8; }
+.toast { position: relative; }
+
+/* ---------- ventana de Agent Office ---------- */
+#win { position: absolute; inset: 0 0 34px 0; display: flex; flex-direction: column; background: #1b1f27; z-index: 10; }
+#titlebar { flex: none; height: 30px; display: flex; align-items: center; background: #161a21; border-bottom: 1px solid #333b4a; padding-left: 10px; gap: 2px; }
+#titlebar button { background: transparent; border: 0; width: 42px; height: 30px; color: #cfd6e2; }
+#titlebar button:hover { background: #333c4d; }
+#titlebar button.x:hover { background: #c0392b; }
+#app { flex: 1; display: flex; min-height: 0; position: relative; }
+#sidebar { width: 240px; flex: none; background: #232833; border-right: 1px solid #333b4a; overflow-y: auto; padding: 8px; }
+.elev-head { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; color: #8d97a8; margin: 4px 6px 8px; }
+.building { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 6px; margin-top: 2px; }
+.building:hover { background: #2c3340; }
+.building.selected { background: #333c4d; border-color: #4f7cac; }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: #6c7a89; }
+.dot.working { background: #6fcf97; } .dot.waiting { background: #f2c94c; } .dot.idle { background: #6c7a89; } .dot.closed { background: #e53e3e; }
+.floor-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.floor-title, .floor-project { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.floor-project { color: #8d97a8; font-size: 11px; }
+.floor-project .esp { color: #f2c94c; font-weight: 600; }
+.floors { margin: 2px 0 6px 14px; padding-left: 6px; border-left: 1px solid #333b4a; }
+.floor { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 3px 6px; }
+.floor:hover { background: #2c3340; } .floor.selected { background: #333c4d; border-color: #4f7cac; } .floor.dim { opacity: .55; }
+.floor-num { width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 4px; background: #11141a; color: #f2c14e; font-weight: 600; flex: none; }
+.floor-label { flex: 1; } .floor-count { min-width: 18px; text-align: center; color: #6fcf97; font-weight: 600; }
+
+#stage { position: relative; flex: 1; min-width: 0; background: #1b1f27; overflow: hidden; }
+#scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#markers { position: absolute; inset: 0; pointer-events: none; }
+#sign { position: absolute; left: 12px; top: 10px; padding: 4px 10px; background: rgba(35,40,51,.85); border: 1px solid #333b4a; border-radius: 6px; z-index: 3; max-width: calc(100% - 200px); }
+#scenechips { position: absolute; left: 12px; top: 46px; display: flex; flex-direction: column; gap: 4px; z-index: 3; align-items: flex-start; }
+.schip { background: rgba(35,40,51,.92); border: 1px solid #4a5568; border-radius: 14px; padding: 2px 10px 2px 4px; display: inline-flex; align-items: center; gap: 6px; }
+.schip:hover { background: #333c4d; }
+#viewctl { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; z-index: 4; }
+#viewctl button { background: rgba(35,40,51,.9); border: 1px solid #4a5568; border-radius: 6px; padding: 4px 10px; min-width: 34px; }
+#maqueta { position: absolute; left: 12px; bottom: 12px; font-size: 11px; color: #8d97a8; background: rgba(17,20,26,.7); padding: 2px 8px; border-radius: 4px; }
+#panelpill { position: absolute; right: 12px; top: 10px; z-index: 5; background: #333c4d; border: 1px solid #4f7cac; border-radius: 16px; padding: 5px 12px; display: none; align-items: center; gap: 8px; }
+#sbtoggle { display: none; position: absolute; left: 12px; top: 10px; z-index: 6; background: #333c4d; border: 1px solid #4a5568; border-radius: 6px; padding: 4px 10px; }
+.marker { position: absolute; transform: translate(-50%, -100%); pointer-events: auto; display: flex; align-items: center; gap: 6px; background: #fff; color: #1b1f27; border-radius: 10px; padding: 3px 9px 3px 4px; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,.5); border: 2px solid #f2c14e; white-space: nowrap; }
+.marker::after { content: ""; position: absolute; left: 50%; bottom: -8px; margin-left: -6px; border: 6px solid transparent; border-top-color: #f2c14e; border-bottom: 0; }
+.marker .ic { width: 20px; height: 20px; line-height: 20px; border-radius: 50%; text-align: center; background: #f2c14e; color: #1b1f27; }
+.marker.turn { border-color: #3f9d6a; } .marker.turn::after { border-top-color: #3f9d6a; } .marker.turn .ic { background: #3f9d6a; color: #fff; }
+.marker.permission { border-color: #e07b39; } .marker.permission::after { border-top-color: #e07b39; } .marker.permission .ic { background: #e07b39; color: #fff; }
+.marker { animation: bob 1.6s ease-in-out infinite; }
+@keyframes bob { 0%,100% { margin-top: 0; } 50% { margin-top: -4px; } }
+@media (prefers-reduced-motion: reduce) { .marker { animation: none; } }
+
+/* ---------- panel 2D ---------- */
+#panel { width: 390px; flex: none; background: #232833; border-left: 1px solid #333b4a; display: flex; flex-direction: column; min-height: 0; }
+#panel .phead { display: flex; align-items: center; padding: 8px 10px 4px; gap: 6px; }
+#panel .phead h1 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #8d97a8; margin: 0; flex: 1; font-weight: 600; }
+.iconbtn { background: transparent; border: 1px solid #4a5568; border-radius: 6px; padding: 2px 8px; }
+.iconbtn:hover { background: #333c4d; }
+.tabs { display: flex; gap: 2px; padding: 0 8px; border-bottom: 1px solid #333b4a; }
+.tab { background: transparent; border: 0; border-bottom: 3px solid transparent; padding: 7px 9px; color: #8d97a8; font-weight: 600; }
+.tab:hover { color: #e6e9ef; }
+.tab[aria-selected="true"] { color: #fff; border-bottom-color: #4f7cac; }
+.tab .cnt { background: #f2c94c; color: #1b1f27; border-radius: 9px; padding: 0 6px; margin-left: 4px; font-size: 11px; }
+.pbody { flex: 1; overflow-y: auto; padding: 10px; min-height: 0; }
+.pfoot { flex: none; border-top: 1px solid #333b4a; padding: 6px 10px; font-size: 12px; background: #1f242d; display: flex; gap: 8px; align-items: center; }
+.pfoot.on { background: #2e2a1a; border-top-color: #8a6d1f; }
+.pfoot .lnk { margin-left: auto; }
+h2 { font-size: 13px; margin: 14px 0 6px; display: flex; align-items: center; gap: 6px; }
+h2:first-child { margin-top: 0; }
+h3 { font-size: 12px; margin: 10px 0 4px; color: #c5cddb; }
+.cnt2 { background: #333c4d; border-radius: 9px; padding: 0 7px; font-size: 11px; }
+.lnk { background: none; border: 0; color: #8fb8e8; text-decoration: underline; padding: 2px 0; cursor: pointer; }
+.btn { background: #333c4d; border: 1px solid #4a5568; border-radius: 6px; padding: 5px 11px; }
+.btn:hover { background: #3d4759; }
+.btn.primary { background: #3a6ea5; border-color: #5b93cb; color: #fff; font-weight: 600; }
+.btn.primary:hover { background: #447bb7; }
+.btn.danger { background: #6b2b2b; border-color: #a04a4a; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.card { background: #2a303c; border: 1px solid #3a4352; border-radius: 8px; padding: 9px 10px; margin-bottom: 8px; }
+.card.alert { border-color: #f2c94c; background: #342f1d; }
+.card.info { border-color: #4f7cac; background: #25303f; }
+.card.warn { border-color: #e07b39; background: #38281e; }
+.empty { border: 1px dashed #4a5568; border-radius: 8px; padding: 12px; text-align: center; }
+.empty p { margin: 4px 0 0; color: #8d97a8; }
+.badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; padding: 0 6px 0 3px; font-weight: 700; font-size: 12px; border: 1px solid; white-space: nowrap; }
+.badge i { font-style: normal; width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 50%; font-size: 11px; }
+.badge.question { color: #f2c94c; border-color: #f2c94c; } .badge.question i { background: #f2c94c; color: #1b1f27; }
+.badge.permission { color: #f0a06a; border-color: #f0a06a; } .badge.permission i { background: #e07b39; color: #fff; }
+.badge.turn { color: #6fcf97; border-color: #6fcf97; } .badge.turn i { background: #3f9d6a; color: #fff; }
+.badge.new { color: #8fd0ff; border-color: #8fd0ff; }
+.wlist { list-style: none; margin: 0; padding: 0; }
+.wcard { background: #2a303c; border: 1px solid #3a4352; border-radius: 8px; margin-bottom: 6px; overflow: hidden; }
+.wcard.sel { border-color: #4f7cac; }
+.whead { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: transparent; border: 0; padding: 8px 10px; }
+.whead:hover { background: #303747; }
+.whead .tt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.whead .tt b, .whead .tt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.whead time { font-variant-numeric: tabular-nums; font-weight: 700; }
+.wbody { padding: 0 10px 10px; border-top: 1px solid #3a4352; }
+.wbody p { margin: 8px 0 4px; }
+.q { font-weight: 600; }
+fieldset { border: 0; padding: 0; margin: 8px 0 0; }
+legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
+.opt { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border: 1px solid #3a4352; border-radius: 6px; margin-top: 4px; cursor: pointer; background: #232833; }
+.opt:hover { border-color: #5b93cb; }
+.opt input { margin-top: 2px; width: 16px; height: 16px; }
+.opt.sel { border-color: #5b93cb; background: #25354a; }
+ol.ro { margin: 4px 0; padding-left: 22px; } ol.ro li { padding: 2px 0; }
+.tag { display: inline-block; border: 1px solid #6c7a89; border-radius: 4px; padding: 0 6px; font-size: 11px; color: #c5cddb; }
+.hint { color: #8d97a8; font-size: 12px; }
+.bar { position: relative; height: 14px; background: #11141a; border-radius: 7px; overflow: hidden; border: 1px solid #333b4a; }
+.bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: #4f7cac; }
+.bar > i.hot { background: repeating-linear-gradient(45deg, #f2c94c, #f2c94c 6px, #c9a02c 6px, #c9a02c 12px); }
+.bar > u { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; }
+.barlbl { position: relative; height: 14px; font-size: 11px; color: #8d97a8; }
+.barlbl span { position: absolute; transform: translateX(-50%); }
+.big { font-size: 22px; font-weight: 700; }
+.rank { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; margin: 6px 0; }
+.rank .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank .bar { grid-column: 1 / -1; height: 6px; }
+.rank .num { font-variant-numeric: tabular-nums; text-align: right; }
+.subtabs { display: flex; gap: 4px; margin: 4px 0 10px; }
+.subtab { background: #2a303c; border: 1px solid #3a4352; border-radius: 14px; padding: 3px 12px; }
+.subtab[aria-selected="true"] { background: #3a6ea5; border-color: #5b93cb; color: #fff; font-weight: 600; }
+ul.tl { list-style: none; margin: 0; padding: 0; border-left: 2px solid #3a4352; margin-left: 6px; }
+ul.tl li { position: relative; padding: 0 0 10px 12px; }
+ul.tl li::before { content: ""; position: absolute; left: -6px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: #4f7cac; }
+ul.tl li.err::before { background: #e53e3e; } ul.tl li.lim::before { background: #f2c94c; }
+.tl .meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: #8d97a8; font-size: 12px; }
+.tl .kind { border: 1px solid #4a5568; border-radius: 4px; padding: 0 5px; color: #c5cddb; font-size: 11px; }
+table.t { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.t th { text-align: left; color: #8d97a8; font-weight: 600; padding: 3px 4px; border-bottom: 1px solid #3a4352; }
+table.t td { padding: 4px; border-bottom: 1px solid #2f3643; vertical-align: top; }
+table.t td.r, table.t th.r { text-align: right; font-variant-numeric: tabular-nums; }
+tr.peer td { background: #3b2a16; font-weight: 600; }
+.stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #333b4a; margin: 6px 0; }
+.stack span { display: block; height: 100%; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: #c5cddb; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+details.ag { background: #2a303c; border: 1px solid #3a4352; border-radius: 8px; margin-bottom: 6px; padding: 0 10px; }
+details.ag summary { padding: 7px 0; cursor: pointer; display: flex; gap: 8px; align-items: center; list-style: none; }
+details.ag summary::-webkit-details-marker { display: none; }
+details.ag summary::before { content: "▸"; color: #8d97a8; }
+details.ag[open] summary::before { content: "▾"; }
+details.ag .tot { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 700; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; padding: 2px 0 8px; }
+.kv .v { text-align: right; font-variant-numeric: tabular-nums; }
+.kv .sum { border-top: 1px solid #4a5568; padding-top: 3px; font-weight: 700; }
+.kv .sumv { border-top: 1px solid #4a5568; padding-top: 3px; font-weight: 700; text-align: right; }
+.kv .hot { color: #f0a06a; font-weight: 700; }
+.flowsvg { width: 100%; height: auto; background: #1f242d; border: 1px solid #333b4a; border-radius: 8px; }
+.sw { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 4px; }
+
+/* ---------- modales ---------- */
+#modal-root { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.6); padding: 12px; }
+#modal-root.open { display: flex; }
+.modal { background: #232833; border: 1px solid #4f7cac; border-radius: 10px; width: min(560px, 100%); max-height: 92vh; overflow-y: auto; padding: 16px 18px; }
+.modal h2 { font-size: 16px; margin: 0 0 8px; }
+.modal dl { margin: 8px 0; }
+.modal dt { font-weight: 700; margin-top: 8px; color: #c5cddb; }
+.modal dd { margin: 2px 0 0; }
+.modal .checks { list-style: none; padding: 0; margin: 10px 0; }
+.modal .checks li { padding: 2px 0 2px 22px; position: relative; }
+.modal .checks li::before { content: "✓"; position: absolute; left: 2px; color: #6fcf97; font-weight: 700; }
+.modal pre { background: #11141a; border: 1px solid #333b4a; border-radius: 6px; padding: 8px; overflow-x: auto; margin: 4px 0; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+.modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+
+/* ---------- ventana de Claude simulada ---------- */
+#claude { position: absolute; inset: 20px 20px 54px 20px; z-index: 20; background: #f4efe6; color: #2b2620; border-radius: 10px; border: 1px solid #b9ae9a; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,.6); max-width: 640px; margin: 0 auto; max-height: 420px; }
+#claude .ct { background: #e4dccd; padding: 6px 12px; border-radius: 10px 10px 0 0; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+#claude .cb { padding: 14px; overflow-y: auto; }
+.copt {display: block; width: 100%; text-align: left; background: #fff; border: 1px solid #c9bda5; border-radius: 8px; padding: 8px 10px; margin-top: 6px; color: #2b2620; }
+.copt:hover { background: #fbe9d0; }
+#claude .btn { background: #fff; color: #2b2620; border-color: #c9bda5; }
+
+#cover { position: absolute; inset: 0 0 34px 0; z-index: 15; background: #2d2a38; display: flex; align-items: center; justify-content: center; text-align: center; color: #cfc8e6; padding: 24px; }
+#titlebar.unf { color: #8d97a8; background: #1b1f27; }
+#titlebar .unftag { font-size: 11px; color: #f2c94c; margin-left: 8px; }
+pre.cmd { color: #e6e9ef; background: #11141a; border: 1px solid #333b4a; border-radius: 6px; padding: 6px 8px; margin: 4px 0; max-height: 84px; overflow: auto; white-space: pre-wrap; word-break: break-all; font: 12px/1.4 Consolas, monospace; }
+.scan { color: #8fb8e8; }
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  #sidebar { position: absolute; z-index: 8; left: 0; top: 0; bottom: 0; width: 260px; box-shadow: 4px 0 18px rgba(0,0,0,.6); display: none; }
+  #sidebar.open { display: block; }
+  #sbtoggle { display: block; }
+  #sign { left: 100px; max-width: calc(100% - 112px); font-size: 12px; }
+  #scenechips { left: 12px; top: 48px; }
+  #panel { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 66%; z-index: 7; border-left: 0; border-top: 1px solid #4f7cac; border-radius: 12px 12px 0 0; box-shadow: 0 -6px 20px rgba(0,0,0,.5); }
+  #panelpill { top: auto; bottom: 12px; right: 12px; }
+  #viewctl { display: none; }
+  #maqueta { display: none; }
+  .tab { padding: 7px 6px; font-size: 12px; }
+  #claude { inset: 8px 8px 44px 8px; }
+}
+</style>
+</head>
+<body>
+
+<details id="simbar">
+  <summary>Simulador de escenarios (no es parte del producto: sirve para provocar cada flujo y cada error)</summary>
+  <div class="grp"><b>Esperas (US1, US2, US15)</b>
+    <button data-sim="ask-q">B hace una pregunta</button>
+    <button data-sim="ask-turn">C termina su turno</button>
+    <button data-sim="ask-perm">A pide un permiso (Bash, comando largo)</button>
+    <button data-sim="ask-multi">D hace 2 preguntas (una multiSelect)</button>
+    <button data-sim="t45">Pasar 45 min (las esperas siguen)</button>
+    <button data-sim="t4h">Pasaron 4 h: «Terminó» pasa a inactiva</button>
+    <button data-sim="burst">Ráfaga: 3 sesiones piden permiso</button>
+    <button data-sim="bg">E: Main cierra turno con subagente en segundo plano</button>
+    <button data-sim="elsewhere">Contestar la pendiente en Claude (desde afuera)</button>
+    <button data-sim="closec">Cerrar la sesion C</button>
+    <button data-sim="e2">Escribir 2 eventos nuevos en A</button>
+    <button data-sim="partial">Transcript grande en A (historia parcial)</button>
+  </div>
+  <div class="grp"><b>Ventana de Windows</b>
+    <button data-sim="min">Minimizar Agent Office</button>
+    <button data-sim="nofocus">Visible al costado, foco en otra app</button>
+    <button data-sim="cover">Tapada por otra ventana maximizada</button>
+    <button data-sim="restore">Darle foco / restaurar</button>
+    <button data-sim="appclose">Cerrar Agent Office</button>
+    <button data-sim="scan">Reescanear el historial</button>
+    <label><input type="checkbox" data-simset="logOff"> Registro de uso apagado (config)</label>
+    <label><input type="checkbox" data-simset="winBlocks"> Windows bloquea las notificaciones</label>
+    <label><input type="checkbox" data-simset="focusFail"> Windows no deja traer Claude al frente</label>
+    <label><input type="checkbox" data-simset="nQ"> Avisar "Pregunta" (config)</label>
+    <label><input type="checkbox" data-simset="nT"> Avisar "Terminó" (config)</label>
+  </div>
+  <div class="grp"><b>Límite de 5 h (US3, US4, US8)</b>
+    <button data-sim="pct70">Subir a ~70 %</button>
+    <button data-sim="pct85">Subir a ~85 %</button>
+    <button data-sim="hit">Choque de límite (resetsAt 16:00)</button>
+    <label><input type="checkbox" data-simset="noHits"> Sin choques registrados en disco</label>
+    <button data-sim="real47">Dato real 47 %</button>
+    <button data-sim="real83">Dato real 83 %</button>
+    <button data-sim="stale">Pasar 12 min sin dato real</button>
+  </div>
+  <div class="grp"><b>Opt-in (US8, US13) y pasos 0</b>
+    <label><input type="checkbox" data-simset="a0" checked> Paso 0A paso (la status line llega a escritorio)</label>
+    <label><input type="checkbox" data-simset="c0" checked> Paso 0C paso (el clic en el aviso elige la sesión)</label>
+    <label><input type="checkbox" data-simset="multiOk" checked> Paso 0B: el hook contesta varias preguntas y multiSelect</label>
+    <label><input type="checkbox" data-simset="claudeNoNotify"> Paso 0B (B1): Claude no avisa mientras el hook retiene la pregunta</label>
+    <label><input type="checkbox" data-simset="slChanged"> Reemplacé a mano la statusLine del encadenador</label>
+    <button data-sim="timeout">Vence el timeout del control (120 s)</button>
+    <label><input type="checkbox" data-simset="q0" checked> Paso 0B: responder paso</label>
+    <label><input type="checkbox" data-simset="p0" checked> Paso 0B: aprobar paso</label>
+    <label>settings.json:
+      <select data-simset="settings"><option value="ok">válido</option><option value="broken">JSON roto</option><option value="locked">bloqueado por otro proceso</option></select></label>
+    <label><input type="checkbox" data-simset="ownSL" checked> Ya tengo una statusLine propia</label>
+    <label><input type="checkbox" data-simset="edited"> Edité settings.json a mano después de activar</label>
+    <button data-sim="hookdown">Canal del hook sin respuesta</button>
+    <button data-sim="hookup">Canal ok</button>
+    <button data-sim="reset">Reiniciar todo</button>
+  </div>
+</details>
+
+<div id="desktop">
+  <div id="wallpaper"><div class="card" id="wallcard"></div></div>
+  <div id="win">
+    <div id="titlebar"><span>Agent Office</span><span class="unftag" id="unftag" hidden>sin foco</span><span class="sp"></span>
+      <button type="button" data-act="min" title="Minimizar: Agent Office sigue vigilando y te avisa con notificaciones de Windows" aria-label="Minimizar">&#8212;</button>
+      <button type="button" class="x" data-act="close" title="Cerrar: Agent Office se cierra y deja de avisar" aria-label="Cerrar">&#10005;</button>
+    </div>
+    <div id="app">
+      <aside id="sidebar" aria-label="Edificios"></aside>
+      <main id="stage">
+        <button id="sbtoggle" type="button" data-act="sb">Edificios</button>
+        <svg id="scene" role="img" aria-label="Maqueta de la oficina en 3D isométrico del piso seleccionado"></svg>
+        <div id="markers"></div>
+        <div id="sign"></div>
+        <div id="scenechips" aria-label="Otras sesiones que te esperan"></div>
+        <div id="viewctl"><button type="button" title="Rotar a la izquierda (inactivo en la maqueta)">&#x27F2;</button><button type="button" title="Ajustar a la vista (inactivo en la maqueta)">Fit</button><button type="button" title="Rotar a la derecha (inactivo en la maqueta)">&#x27F3;</button></div>
+        <div id="maqueta">Maqueta estática del 3D. Lo nuevo: el marcador sobre la oficina del jefe y las píldoras de arriba a la izquierda.</div>
+        <button id="panelpill" type="button" data-act="panel" aria-label="Abrir el panel"></button>
+      </main>
+      <aside id="panel" aria-label="Panel de Agent Office"></aside>
+    </div>
+  </div>
+  <div id="cover" hidden><div><b>Otra ventana maximizada (editor de código, simulada)</b><br>Agent Office quedó tapado: sigue vigilando y avisa igual.<br><br><button type="button" class="btn" data-act="uncover">Traer Agent Office al frente</button></div></div>
+  <div id="claude" hidden></div>
+  <div id="toasts" role="status" aria-live="polite" aria-label="Notificaciones de Windows simuladas"></div>
+  <div id="taskbar"><span class="muted">Barra de tareas de Windows (simulada)</span><span class="sp"></span><button type="button" id="tbbtn" data-act="tb"></button></div>
+</div>
+<div id="modal-root"></div>
+
+<script>
+"use strict";
+/* ===== utilidades ===== */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmtN = (n) => n.toLocaleString("es-AR");
+const fmtK = (n) => (n / 1000).toLocaleString("es-AR", { maximumFractionDigits: 1 }) + " k";
+const approx = (n) => "~" + (n >= 1000 ? (Math.round(n / 100) / 10).toLocaleString("es-AR") + " k" : n);
+const pctf = (x) => Math.round(x) + " %";
+const mmss = (s) => { s = Math.max(0, Math.floor(s)); if (s >= 3600) return Math.floor(s / 3600) + ":" + String(Math.floor(s / 60) % 60).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+const DAY0 = 14 * 3600 + 30 * 60;
+const dayS = (t) => DAY0 + t;
+const parseHM = (hm) => { const [h, m] = hm.split(":").map(Number); return h * 3600 + m * 60; };
+const fmtDay = (s) => [Math.floor(s / 3600) % 24, Math.floor(s / 60) % 60, Math.floor(s) % 60].map((x) => String(x).padStart(2, "0")).join(":");
+const clock = (t) => { const s = 14 * 3600 + 30 * 60 + Math.floor(t); const h = Math.floor(s / 3600) % 24, m = Math.floor(s / 60) % 60, sec = s % 60; return [h, m, sec].map((x) => String(x).padStart(2, "0")); };
+const hhmm = (t) => clock(t).slice(0, 2).join(":");
+const hhmmss = (t) => clock(t).join(":");
+const cut = (s, n) => (s.length > n ? s.slice(0, n) + "…" : s);
+const MOT = { question: "Pregunta", turn: "Terminó", permission: "Permiso" };
+const ICO = { question: "?", turn: "✓", permission: "!" };
+const SETTINGS_PATH = "%USERPROFILE%\\.claude\\settings.json";
+const BACKUP_REAL = "%USERPROFILE%\\.claude\\settings.json.agent-office-statusline.bak";
+const BACKUP_CTL = "%USERPROFILE%\\.claude\\settings.json.agent-office-control.bak";
+const OWN_CMD = "node ~/.claude/mi-barra.js";
+const CFG_PATH = "%APPDATA%\\agent-office\\config.json";
+const CTL_TIMEOUT = 120;
+
+/* ===== datos de muestra (ficticios) ===== */
+const TEAMS = [["game", "Game", 5], ["content", "Content", 4], ["product", "Product", 3], ["software", "Software", 2], ["general", "General", 1]];
+const ROOMS = {
+  software: ["Architect", "Coder", "Tester", "Boss", "Debugger", "Code reviewer", "Security", "Stairs", "Performance", "DB engineer", "DevOps", "Lounge"],
+  product: ["Discovery", "Spec", "UX", "Boss", "Research", "Brief", "Stories", "Stairs", "Design", "Metrics", "Docs", "Lounge"],
+  content: ["Copy", "Visual", "Video", "Boss", "Edit", "SEO", "Social", "Stairs", "Brand", "Data", "Docs", "Lounge"],
+  game: ["Design", "Level", "Art", "Boss", "Audio", "QA", "Tools", "Stairs", "Netcode", "UI", "Build", "Lounge"],
+  general: ["Main", "Helper", "Notes", "Boss", "Search", "Files", "Misc", "Stairs", "Other", "Docs", "Ops", "Lounge"],
+};
+const LIT = { software: ["Architect", "Coder", "Tester", "Boss", "Debugger"], product: ["Discovery", "Boss"], content: [], game: [], general: ["Boss"] };
+const WORKING_BY = { b: { product: 1, software: 3 }, a: { software: 2 }, e: { software: 2 }, c: { content: 1 }, d: {} };
+
+/* Una llamada de AskUserQuestion puede traer varias preguntas; algunas son multiSelect (multi:true). */
+const QS = {
+  b: [{ t: "¿Dejo el panel abierto por defecto en pantallas chicas?", o: ["Sí, abierto", "No, colapsado", "Solo si hay alguien esperando"] }],
+  a: [{ t: "¿Migro también los endpoints v1?", o: ["Sí, todos", "Solo los públicos", "Ahora no"] }],
+  c: [{ t: "¿Publico la guía con el nombre nuevo del plugin?", o: ["Sí, publicala", "Esperá a la revisión"] }],
+  d: [{ t: "¿Muestro los precios con IVA incluido?", o: ["Con IVA", "Sin IVA", "Las dos formas"] },
+      { t: "¿Qué planes destaco en la página?", o: ["Básico", "Pro", "Equipo", "Empresa"], multi: true }],
+  e: [{ t: "¿Redondeo cada ítem o el total de la factura?", o: ["Cada ítem", "El total"] }],
+};
+const isComplex = (id) => QS[id].length > 1 || QS[id].some((q) => q.multi);
+const CMD = {
+  a: "npm run migrate -- --env=staging --apply --verbose --log=./out/migracion.log --batch=500 --retries=3 --notify=false --backup-dir=./out/backups/2026-11-18 --skip-validation=false && node scripts/limpiar-temporales.mjs --force --older-than=0 && rm -rf ./out/backups ./out/migracion.log",
+  b: "npm --prefix ui run build && cargo test -p office-core usage_estimate",
+  c: "git push origin docs/guia-plugin",
+  d: "npx prettier --write src/pricing/**/*.tsx",
+  e: "node scripts/recalcular-facturas.mjs --desde=2026-01-01 --hasta=2026-11-18",
+};
+const SID = { a: "s-3f9a", b: "s-7c1e", c: "s-b204", d: "s-1d6f", e: "s-92ae" };
+
+const EV0 = {
+  b: [
+    [1, "10:42", "Main", "launch", "software-architect"],
+    [2, "10:46", "architect", "file", "docs/plan.md"],
+    [3, "10:47", "architect", "cmd", "git status --short && git log --oneline -5 --decorate --graph"],
+    [4, "10:51", "architect", "report", "Plan listo: 6 pasos, 2 riesgos y 3 decisiones que necesitan tu confirmación. Archivos nuevos: panel.ts y flow.ts."],
+    [5, "10:54", "Main", "error", "Error de API: rate_limit (Claude Code reintenta solo)"],
+    [6, "10:56", "Main", "limit", "Choque con el límite de 5 h · se liberaba 11:00"],
+    [7, "11:03", "Main", "compact", "Compactó el contexto"],
+    [8, "11:10", "Main", "launch", "software-engineer"],
+    [9, "11:38", "coder", "file", "ui/src/panel.ts"],
+    [10, "11:52", "coder", "cmd", "npm --prefix ui run build"],
+    [11, "14:12", "coder", "report", "Implementé el panel con 4 pestañas. Falta decidir el valor por defecto en pantallas chicas."],
+  ],
+  a: [[1, "11:20", "Main", "launch", "software-engineer"], [2, "11:44", "coder", "file", "src/api/clientes.ts"], [3, "12:30", "coder", "cmd", "npm run test -- clientes"], [4, "13:15", "coder", "report", "Migré 14 endpoints. Quedan 3 con el formato viejo de fechas."]],
+  c: [[1, "13:02", "Main", "launch", "docs-writer"], [2, "13:20", "docs-writer", "file", "docs/guia-plugin.md"], [3, "14:00", "docs-writer", "report", "Guía lista: 9 secciones y 4 ejemplos. Revisé los nombres de comandos."]],
+  d: [[1, "12:10", "Main", "file", "src/pricing/Tabla.tsx"], [2, "12:12", "Main", "cmd", "npx tsc --noEmit"]],
+  e: [[1, "13:40", "Main", "launch", "software-engineer"], [2, "14:05", "coder", "file", "src/facturas/redondeo.ts"], [3, "14:18", "coder", "cmd", "node scripts/recalcular-facturas.mjs --dry"]],
+};
+const KIND = { launch: "Lanzó", report: "Informe", file: "Archivo", cmd: "Comando", error: "Error", limit: "Límite", compact: "Compactó" };
+
+const AG = {
+  b: [{ r: "Main", m: "Opus", tot: 52000 }, { r: "architect", m: "Opus", tot: 31000, start: 12000, rep: 1500 },
+      { r: "coder", m: "Opus", tot: 238000, start: 12000, rew: { tok: 128400, at: "13:31", pause: 47 }, rep: 1500 },
+      { r: "tester", m: "Sonnet", tot: 21000, start: 11000, rep: 1200 }, { r: "debugger", m: "Sonnet", tot: 18000, start: 11000, rep: 900 }],
+  a: [{ r: "Main", m: "Opus", tot: 58000 }, { r: "coder", m: "Sonnet", tot: 40000, start: 11000, rep: 1400 }, { r: "code-reviewer", m: "Sonnet", tot: 12000, start: 11000, rep: 800 }],
+  e: [{ r: "Main", m: "Opus", tot: 42000 }, { r: "coder", m: "Sonnet", tot: 28000, start: 11000, rep: 1300 }, { r: "tester", m: "Sonnet", tot: 0, nodata: true }],
+  c: [{ r: "Main", m: "Opus", tot: 18000 }, { r: "docs-writer", m: "Sonnet", tot: 12000, start: 11000, rep: 600 }],
+  d: [{ r: "Main", m: "Sonnet", tot: 15000 }],
+  f: [{ r: "Main", m: "Sonnet", tot: 10000 }],
+  g: [{ r: "Main", m: "Sonnet", tot: 5000 }],
+};
+const TITLE_X = { a: "Migración API clientes", b: "Agent Office utilidad", c: "Docs del plugin", d: "Landing de precios", e: "Refactor facturación", f: "Script de backups", g: "Prototipo de login" };
+const CEILING = 1200000;
+
+/* ===== estado ===== */
+let S, T, tid, batch, batchTimer;
+function init() {
+  T = 0; tid = 0; batch = []; batchTimer = null;
+  S = {
+    sessions: [
+      { id: "e", title: "Refactor facturación", project: "facturacion", status: "working", seen: 3, wait: null },
+      { id: "b", title: "Agent Office utilidad", project: "agent-office", status: "waiting", seen: 11, wait: { kind: "question", since: -90, hook: false, why: "off" } },
+      { id: "a", title: "Migración API clientes", project: "api-clientes", status: "working", seen: 4, wait: null },
+      { id: "c", title: "Docs del plugin", project: "gaisser-agents", status: "waiting", seen: 3, wait: { kind: "turn", since: -30, hook: false, why: "off" } },
+      { id: "d", title: "Landing de precios", project: "landing", status: "idle", seen: 2, wait: null },
+    ],
+    ev: JSON.parse(JSON.stringify(EV0)),
+    sel: "b", floor: "software", panelOpen: window.innerWidth > 900, sbOpen: false,
+    tab: "ahora", sub: "timeline", exp: null, pick: {}, sending: {},
+    minimized: false, appClosed: false, claudeOpen: null, focus: true, covered: false, scanning: true, focusLimit: false,
+    lastBlur: dayS(-25 * 60), // la última vez que la ventana perdió el foco (viene del log de uso; 14:05)
+    opts: { real: false, control: false, ctlState: "ok", realNote: "", ctlNote: "" },
+    sim: { a0: true, q0: true, p0: true, c0: true, multiOk: true, claudeNoNotify: false, slChanged: false, logOff: false, settings: "ok", ownSL: true, edited: false, winBlocks: false, focusFail: false, nQ: false, nT: false, noHits: false },
+    extra: 0, hit: null, real: null, alertFired: false,
+    log: [], toasts: [], notes: [], banner: null, modal: null, partial: {}, winNote: false,
+  };
+  logEv("foco (arranque)", "-");
+  setTimeout(() => { S.scanning = false; checkAlert(); render(); }, 5000);
+}
+function hasFocus() { return S.focus && !S.minimized && !S.covered && !S.appClosed; }
+function lostFocus(why) { S.lastBlur = dayS(T); logEv(why, "-"); }
+function sess(id) { return S.sessions.find((s) => s.id === id); }
+function waits() { return S.sessions.filter((s) => s.wait && s.status !== "closed").sort((a, b) => a.wait.since - b.wait.since); }
+function logEv(type, id, extra) { if (S.sim.logOff) return; S.log.unshift(hhmmss(T) + " · " + type + (extra ? " · " + extra : "") + " · " + (id === "-" ? "-" : SID[id] || id)); S.log = S.log.slice(0, 40); }
+function note(text, cls) { const n = { id: ++tid, text, cls: cls || "info" }; S.notes.push(n); setTimeout(() => { S.notes = S.notes.filter((x) => x.id !== n.id); render(); }, 9000); }
+
+/* ===== uso y límite ===== */
+function agents(sid) { return AG[sid].map((a, i) => (a.r === "Main" && sid === "b" ? { ...a, tot: a.tot + S.extra } : a)); }
+function sessTotal(sid) { return agents(sid).reduce((n, a) => n + a.tot, 0); }
+function winTotal() { return Object.keys(AG).reduce((n, k) => n + sessTotal(k), 0); }
+function estPct() { return (winTotal() / CEILING) * 100; }
+function limitMode() {
+  if (S.hit) return { mode: "hit" };
+  if (S.opts.real && S.sim.slChanged) return { mode: "est", broken: true };
+  if (S.opts.real && S.real) { const age = T - S.real.at; if (age <= 600) return { mode: "real", pct: S.real.pct }; return { mode: "est", stale: S.real, age }; }
+  if (S.scanning) return { mode: "scanning" };
+  if (S.sim.noHits) return { mode: "nohits" };
+  return { mode: "est" };
+}
+function curPct() { const m = limitMode(); if (m.mode === "real") return m.pct; if (m.mode === "est") return estPct(); return null; }
+function checkAlert() {
+  const p = curPct();
+  if (p !== null && p >= 80 && !S.alertFired) {
+    S.alertFired = true; logEv("umbral", "-");
+    const m = limitMode();
+    deliver({ title: "Agent Office", body: m.mode === "real" ? "Llevás " + Math.round(p) + " % del límite de 5 h · se libera 16:00" : "Llevás ~80 % del límite de 5 h (estimado) · se libera ~16:02", sid: null, limit: true });
+  }
+}
+
+/* ===== navegación ===== */
+function select(id) { S.sel = id; S.sbOpen = false; }
+function goto(id) { select(id); S.exp = id; }
+
+/* ===== esperas ===== */
+function ask(id, kind) {
+  const s = sess(id); if (!s || s.status === "closed") return;
+  s.status = "waiting";
+  const part = kind === "question" ? S.sim.q0 : kind === "permission" ? S.sim.p0 : false;
+  const hold = kind !== "turn" && S.opts.control && part && !S.appClosed && S.opts.ctlState === "ok";
+  s.wait = { kind, since: T, hook: hold, why: S.appClosed ? "closed" : S.opts.ctlState === "down" ? "down" : "off" };
+  S.sending[id] = false; delete S.pick[id];
+  if (S.appClosed) { render(); return; }
+  if (!hasFocus() && wantNotify(kind)) { batch.push(s); if (!batchTimer) batchTimer = setTimeout(flush, 1200); }
+  render();
+}
+/* Pregunta y Terminó vienen apagados (Claude ya avisa). Excepción: con el control activo, si Claude no avisa mientras el hook retiene la pregunta (B1), Pregunta se prende sola. */
+function questionAutoOn() { return S.opts.control && S.sim.q0 && S.sim.claudeNoNotify; }
+function wantNotify(kind) { return kind === "permission" || (kind === "question" && (S.sim.nQ || questionAutoOn())) || (kind === "turn" && S.sim.nT); }
+function flush() {
+  const b = batch; batch = []; batchTimer = null; if (!b.length) return;
+  if (b.length > 1) deliver({ title: "Agent Office", body: b.length + " sesiones te esperan", sid: b[0].id });
+  else deliver({ title: b[0].title, body: "Te espera · " + MOT[b[0].wait.kind], sid: b[0].id });
+}
+function deliver(t) {
+  if (S.appClosed) return; // con la app cerrada no hay nadie que avise
+  if (hasFocus()) { render(); return; } // solo con el foco no hay aviso (AC9a); minimizada, al costado sin foco o tapada, sí
+  if (S.sim.winBlocks) { logEv("aviso no entregado", "-"); S.winNote = true; render(); return; }
+  const n = { ...t, id: ++tid }; S.toasts.push(n); logEv("aviso", t.sid || "-");
+  setTimeout(() => { S.toasts = S.toasts.filter((x) => x.id !== n.id); render(); }, 12000);
+  render();
+}
+function clearWait(s) { s.wait = null; s.status = "working"; delete S.pick[s.id]; delete S.sending[s.id]; }
+function canInteract(s) {
+  const w = s.wait; if (!w || w.kind === "turn") return false;
+  const part = w.kind === "question" ? S.sim.q0 : S.sim.p0;
+  if (w.kind === "question" && isComplex(s.id) && !S.sim.multiOk) return false;
+  return w.hook && S.opts.control && part && S.opts.ctlState === "ok" && !S.appClosed;
+}
+function roReason(s) {
+  const w = s.wait;
+  if (!S.opts.control) return "off";
+  if ((w.kind === "question" && !S.sim.q0) || (w.kind === "permission" && !S.sim.p0)) return "unavail";
+  if (w.kind === "question" && isComplex(s.id) && !S.sim.multiOk) return "format";
+  if (w.why === "timeout") return "timeout";
+  if (w.why === "released") return "released";
+  if (S.opts.ctlState === "down") return "down";
+  return { closed: "closed", down: "downpast" }[w.why] || "before";
+}
+/* El hook de control espera como mucho CTL_TIMEOUT s; después se libera y Claude pregunta solo (AC55a). */
+function checkTimeouts() {
+  let ch = false;
+  S.sessions.forEach((s) => { const w = s.wait; if (w && w.hook && w.kind !== "turn" && T - w.since >= CTL_TIMEOUT) { w.hook = false; w.why = "timeout"; ch = true; } });
+  if (ch) render();
+}
+const RO_MSG = {
+  timeout: "Se venció el tiempo: contestá en Claude. El hook se liberó y Claude te muestra su propio diálogo (se cambia en config.json, entre 15 y 600 s).",
+  released: "Solo lectura: la mandaste a Claude sin decidir. Contestala allá.",
+  format: "Esta pregunta tiene un formato que no puedo contestar desde acá: contestala en Claude.",
+  off: "Solo lectura: Agent Office no está habilitado para contestar. Podés activar el control en Opciones.",
+  unavail: "Solo lectura: contestar desde acá no está disponible en esta instalación (no pasó la prueba 0B). Contestá en Claude.",
+  before: "Solo lectura: llegó antes de activar el control. Contestala en Claude; las próximas las contestás acá.",
+  closed: "Solo lectura: llegó con Agent Office cerrado y Claude la preguntó solo. Contestala en Claude.",
+  down: "El canal con Claude no responde. Contestá en Claude: tu sesión no queda trabada.",
+  downpast: "Solo lectura: llegó cuando el canal con Claude no respondía. Contestala en Claude.",
+};
+/* S.pick[id][qi]: índice elegido (elección única) o lista de índices (multiSelect). */
+function answered(id) {
+  const pk = S.pick[id] || [];
+  return QS[id].every((q, qi) => (q.multi ? Array.isArray(pk[qi]) && pk[qi].length > 0 : typeof pk[qi] === "number"));
+}
+function answerText(id) {
+  const pk = S.pick[id] || [];
+  return QS[id].map((q, qi) => "«" + (q.multi ? pk[qi].map((i) => q.o[i]).join(", ") : q.o[pk[qi]]) + "»").join(" y ");
+}
+function pickOpt(id, qi, oi) {
+  const q = QS[id][qi]; S.pick[id] = S.pick[id] || [];
+  if (q.multi) { const cur = S.pick[id][qi] || []; S.pick[id][qi] = cur.includes(oi) ? cur.filter((x) => x !== oi) : cur.concat(oi); }
+  else S.pick[id][qi] = oi;
+}
+function sendAnswer(id) {
+  const s = sess(id); if (!s || !s.wait || !answered(id)) return; S.sending[id] = true; render();
+  setTimeout(() => {
+    if (!s.wait) return;
+    const txt = answerText(id);
+    clearWait(s); logEv("respuesta", id);
+    note("Contestaste " + txt + " en " + s.title + ". Main sigue con " + (QS[id].length > 1 ? "esas respuestas." : "esa respuesta."), "info");
+    render();
+  }, 700);
+}
+function decide(id, d) {
+  const s = sess(id); if (!s || !s.wait) return; S.sending[id] = true; render();
+  setTimeout(() => {
+    if (!s.wait) return; clearWait(s); logEv(d === "allow" ? "permiso aprobado" : "permiso rechazado", id);
+    note(d === "allow" ? "Aprobaste el comando en " + s.title + ". Se ejecuta ahora." : "Rechazaste el comando en " + s.title + ". Main lo ve como rechazado.", "info");
+    render();
+  }, 700);
+}
+function releaseToClaude(id) {
+  const s = sess(id); if (!s || !s.wait) return; s.wait.hook = false; s.wait.why = "released";
+  logEv("Ir a Claude", id);
+  note("Liberé la sesión sin decidir: Claude te muestra su propio diálogo.", "info"); goClaude(id, true);
+}
+function goClaude(id, forced) {
+  const s = sess(id);
+  if (S.sim.focusFail && !forced) { S.banner = { sid: id }; render(); return; }
+  S.claudeOpen = id; render();
+}
+function claudeAnswer(id, idx) {
+  const s = sess(id); if (!s || !s.wait) { S.claudeOpen = null; render(); return; }
+  clearWait(s); S.claudeOpen = null; render();
+  if (!S.appClosed) note(s.title + " ya se contestó en Claude. Ya no te espera.", "info");
+}
+
+/* ===== simulador ===== */
+const SIM = {
+  "ask-q": () => ask("b", "question"), "ask-turn": () => ask("c", "turn"), "ask-perm": () => ask("a", "permission"), "ask-multi": () => ask("d", "question"),
+  t45: () => { S.sessions.forEach((s) => { if (s.wait) s.wait.since -= 2700; }); note("Pasaron 45 min: las esperas siguen visibles (también «Terminó»), aunque supere los 30 min de actividad.", "info"); },
+  t4h: () => { const c = S.sessions.filter((s) => s.wait && s.wait.kind === "turn"); c.forEach((s) => { s.wait = null; s.status = "idle"; }); note(c.length ? "Pasaron 4 h: «Terminó» salió de «Te esperan» y la sesión quedó «inactiva»." : "No hay esperas «Terminó» para pasar a inactiva.", "info"); },
+  timeout: () => { const s = waits().find((x) => x.wait.hook && x.wait.kind !== "turn"); if (!s) { note("No hay una pregunta ni un permiso retenidos por el hook. Activá el control y provocá una pregunta.", "warn"); return; } s.wait.since = T - CTL_TIMEOUT; checkTimeouts(); },
+  nofocus: () => { if (hasFocus()) lostFocus("pierde foco"); S.focus = false; S.minimized = false; },
+  cover: () => { if (hasFocus()) lostFocus("pierde foco"); S.covered = true; },
+  scan: () => { S.scanning = true; setTimeout(() => { S.scanning = false; checkAlert(); render(); }, 5000); },
+  burst: () => { ask("a", "permission"); ask("d", "permission"); ask("e", "permission"); },
+  bg: () => { const s = sess("e"); s.status = "working"; s.wait = null; note("E: Main cerró su turno pero un subagente sigue trabajando. No cuenta como espera (se espera 6 s para el cierre final).", "info"); setTimeout(() => ask("e", "turn"), 6000); },
+  elsewhere: () => { const s = waits().find((x) => x.wait.kind !== "turn"); if (!s) { note("No hay preguntas ni permisos pendientes.", "info"); return; } clearWait(s); if (S.claudeOpen === s.id) S.claudeOpen = null; note(s.title + " se contestó en Claude. Ya no te espera y no queda ningún proceso del hook.", "info"); render(); },
+  closec: () => { const s = sess("c"); if (!s) return; s.status = "closed"; render(); setTimeout(() => { if (s.wait) { s.wait = null; } render(); }, 2000); setTimeout(() => { S.sessions = S.sessions.filter((x) => x.id !== "c"); if (S.sel === "c") S.sel = "b"; render(); }, 4500); },
+  e2: () => { const evs = S.ev.a; const n = Math.max(...evs.map((e) => e[0])); evs.push([n + 1, hhmm(T), "coder", "file", "src/api/fechas.ts", dayS(T)], [n + 2, hhmm(T + 20), "coder", "cmd", "npm run test -- fechas", dayS(T + 1)]); },
+  partial: () => { S.partial.a = !S.partial.a; goto("a"); S.tab = "sesion"; S.sub = "timeline"; },
+  min: () => { if (hasFocus()) lostFocus("minimizado"); S.minimized = true; }, restore: () => { restore(null); },
+  appclose: () => { appClose(); },
+  pct70: () => { S.extra = Math.max(0, Math.round(0.7 * CEILING) - 600000); checkAlert(); },
+  pct85: () => { S.extra = Math.round(0.85 * CEILING) - 600000; checkAlert(); },
+  hit: () => { S.hit = { resets: "16:00" }; S.ev.b.push([Math.max(...S.ev.b.map((e) => e[0])) + 1, hhmm(T), "Main", "limit", "Choque con el límite de 5 h · se libera 16:00", dayS(T)]); },
+  real47: () => { if (!S.opts.real) { note("El % real no está activado: activalo en Opciones.", "warn"); return; } S.real = { pct: 47, at: T, d7: 22 }; S.hit = null; checkAlert(); },
+  real83: () => { if (!S.opts.real) { note("El % real no está activado: activalo en Opciones.", "warn"); return; } S.real = { pct: 83, at: T, d7: 31 }; S.hit = null; checkAlert(); },
+  stale: () => { if (S.real) S.real.at = T - 720; else note("Todavía no llegó ningún dato real.", "info"); },
+  hookdown: () => { if (!S.opts.control) { note("El control no está activado: activalo en Opciones.", "warn"); return; } S.opts.ctlState = "down"; },
+  hookup: () => { S.opts.ctlState = "ok"; },
+  reset: () => { location.reload(); },
+};
+function restore(sid) {
+  S.minimized = false; S.appClosed = false; S.covered = false; S.focus = true; logEv("foco", "-");
+  S.tab = "ahora"; if (!S.panelOpen) S.panelOpen = true;
+  if (sid) goto(sid); else S.exp = null; // sin sesión: queda la más antigua primera en «Te esperan»
+}
+function appClose() {
+  if (hasFocus()) lostFocus("pierde foco (cierre)"); else S.lastBlur = dayS(T);
+  S.appClosed = true; S.minimized = false; S.toasts = []; S.claudeOpen = null;
+  S.sessions.forEach((s) => { if (s.wait) { s.wait.hook = false; s.wait.why = "closed"; } });
+}
+
+/* ===== activar / deshacer opt-in ===== */
+function openModal(m) { S.modal = m; renderModal(); }
+function closeModal() { S.modal = null; renderModal(); }
+function confirmEnable(kind) {
+  if (S.sim.settings !== "ok") { S.modal = { type: "error", cause: S.sim.settings, kind }; renderModal(); return; }
+  if (kind === "real") { S.opts.real = true; S.opts.realNote = ""; S.sim.slChanged = false; note("Listo: % real activado. Backup propio en " + BACKUP_REAL + (S.sim.ownSL ? ". Tu comando original quedó guardado en " + CFG_PATH + " y en ese backup" : "") + ". Esperando el primer dato de Claude Code.", "info"); }
+  else { S.opts.control = true; S.opts.ctlState = "ok"; S.opts.ctlNote = ""; S.sessions.forEach((s) => { if (s.wait) { s.wait.hook = false; s.wait.why = "before"; } }); note("Listo: control activado. Backup propio en " + BACKUP_CTL + ". Desde la próxima pregunta o permiso podés contestar acá.", "info"); }
+  S.sim.edited = false; closeModal(); render();
+}
+/* Variante de deshacer según la regla de Constraints: archivo igual y otra opción apagada -> backup exacto;
+   si no, se quitan solo las claves propias; si el usuario cambió la statusLine, no se toca y se avisa. */
+function undoVariant(kind) {
+  const other = kind === "real" ? S.opts.control : S.opts.real;
+  if (kind === "real" && S.sim.slChanged) return "slchanged";
+  if (other) return "other";
+  if (S.sim.edited) return "edited";
+  return "exact";
+}
+function undoMsg(kind, v) {
+  const otherName = kind === "real" ? "el control" : "el % real";
+  if (v === "slchanged") return "Tu status line cambió después de activar; la dejé como está. Quité solo lo demás que había agregado Agent Office. No restauré el archivo entero.";
+  if (v === "other") return "Quité solo lo mío y dejé el resto como estaba: " + otherName + " sigue activo con su propio backup. No restauré el archivo entero.";
+  if (v === "edited") return "Quité solo lo que había agregado Agent Office y conservé tus cambios. No restauré el archivo entero porque lo modificaste después de activar.";
+  return "Restauré settings.json exacto desde el backup de esta opción.";
+}
+function confirmUndo(kind) {
+  const v = undoVariant(kind), msg = undoMsg(kind, v);
+  if (kind === "real") { S.opts.real = false; S.real = null; S.sim.slChanged = false; S.opts.realNote = msg; }
+  else { S.opts.control = false; S.opts.ctlNote = msg; S.sessions.forEach((s) => { if (s.wait) { s.wait.hook = false; s.wait.why = "off"; } }); }
+  note((kind === "real" ? "Deshiciste el % real. Volvió la estimación. " : "Deshiciste el control. Ya no se lanza ningún hook. ") + msg, "info");
+  closeModal(); render();
+}
+
+/* ===== render: barra lateral ===== */
+function renderSidebar() {
+  const stMap = { working: "trabajando", waiting: "te espera", idle: "inactiva", closed: "cerrada" };
+  let h = '<div class="elev-head">Buildings</div>';
+  for (const s of S.sessions) {
+    const sel = s.id === S.sel;
+    const esp = s.wait && s.status !== "closed";
+    const sub = esp ? '<span class="esp">te espera <time data-since="' + s.wait.since + '">' + mmss(T - s.wait.since) + "</time></span> · " + MOT[s.wait.kind] : stMap[s.status];
+    h += '<button class="building' + (sel ? " selected" : "") + '" type="button" data-act="build" data-arg="' + s.id + '" data-fid="build:' + s.id + '"><span class="dot ' + s.status + '"></span><span class="floor-text"><span class="floor-title">' + esc(s.title) + '</span><span class="floor-project">' + esc(s.project) + " · " + sub + "</span></span></button>";
+    if (sel) {
+      h += '<div class="floors">';
+      for (const [key, label, num] of TEAMS) {
+        const wk = (WORKING_BY[s.id] || {})[key] || 0;
+        h += '<button class="floor' + (key === S.floor ? " selected" : "") + (LIT[key].length > 1 ? "" : " dim") + '" type="button" data-act="floor" data-arg="' + key + '" data-fid="floor:' + key + '"><span class="floor-num">' + num + '</span><span class="floor-label">' + label + '</span><span class="floor-count" title="working agents">' + (wk || "") + "</span></button>";
+      }
+      h += "</div>";
+    }
+  }
+  $("#sidebar").innerHTML = h; $("#sidebar").classList.toggle("open", S.sbOpen);
+}
+
+/* ===== render: escena 3D simulada ===== */
+let bossAnchor = null;
+function renderScene() {
+  const names = ROOMS[S.floor], lit = LIT[S.floor], cols = 4, W = 120, H = 60, HG = 14;
+  const cells = names.map((n, i) => ({ n, c: i % cols, r: Math.floor(i / cols) })).sort((p, q) => p.c + p.r - (q.c + q.r) || p.c - q.c);
+  let g = '<defs><linearGradient id="ground" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a303c"/><stop offset="1" stop-color="#1f242d"/></linearGradient></defs>';
+  const P = (c, r) => ({ x: (c - r) * (W / 2) + 20, y: (c + r) * (H / 2) });
+  // calle / base
+  const a = P(-0.4, -0.4), b = P(cols - 0.6, -0.4), d = P(cols - 0.6, 2.4), e = P(-0.4, 2.4);
+  g += '<polygon points="' + [a, b, d, e].map((p) => p.x + "," + p.y).join(" ") + '" fill="#3a404d" stroke="#4a5262"/>';
+  for (const cell of cells) {
+    const p = P(cell.c, cell.r), s = 0.9, hw = (W / 2) * s, hh = (H / 2) * s;
+    const isLit = lit.includes(cell.n), isBoss = cell.n === "Boss", isSt = cell.n === "Stairs";
+    const top = isBoss ? "#8a7a55" : isSt ? "#5a6270" : isLit ? "#6a7f6f" : "#3d4452";
+    const left = isBoss ? "#6d5f40" : isLit ? "#52665a" : "#2f3541", right = isBoss ? "#7a6b49" : isLit ? "#5c7064" : "#353b48";
+    const T0 = [p.x, p.y - hh - HG], R = [p.x + hw, p.y - HG], B = [p.x, p.y + hh - HG], L = [p.x - hw, p.y - HG];
+    g += '<polygon points="' + [L, B, [B[0], B[1] + HG], [L[0], L[1] + HG]].map((q) => q.join(",")).join(" ") + '" fill="' + left + '"/>';
+    g += '<polygon points="' + [B, R, [R[0], R[1] + HG], [B[0], B[1] + HG]].map((q) => q.join(",")).join(" ") + '" fill="' + right + '"/>';
+    g += '<polygon points="' + [T0, R, B, L].map((q) => q.join(",")).join(" ") + '" fill="' + top + '" stroke="#11141a" stroke-opacity=".4"/>';
+    if (isSt) for (let i = 0; i < 5; i++) g += '<line x1="' + (p.x - 24 + i * 9) + '" y1="' + (p.y - HG - 6 - i * 2.2) + '" x2="' + (p.x - 6 + i * 9) + '" y2="' + (p.y - HG + 3 - i * 2.2) + '" stroke="#aeb7c6" stroke-width="2"/>';
+    else if (isLit) [[-14, -2], [10, -8]].forEach(([dx, dy]) => { g += '<circle cx="' + (p.x + dx) + '" cy="' + (p.y - HG + dy - 6) + '" r="3" fill="#e9c9a0"/><rect x="' + (p.x + dx - 3) + '" y="' + (p.y - HG + dy - 3) + '" width="6" height="7" rx="2" fill="#4f7cac"/>'; });
+    g += '<text x="' + p.x + '" y="' + (p.y - HG - hh + 1) + '" text-anchor="middle" font-size="10" font-weight="700" fill="' + (isBoss ? "#f2c14e" : isLit || isSt ? "#fff" : "#9aa3b3") + '" stroke="#000" stroke-width=".4">' + cell.n + "</text>";
+    if (isBoss) bossAnchor = { x: p.x, y: p.y - HG - hh - 12 };
+  }
+  const svg = $("#scene"); svg.setAttribute("viewBox", "-170 -70 440 275"); svg.innerHTML = g;
+  const s = sess(S.sel), fl = TEAMS.find((t) => t[0] === S.floor);
+  $("#sign").textContent = (s ? s.title : "") + " · floor " + fl[2] + " " + fl[1] + " · " + (LIT[S.floor].length + 1) + " people";
+  // pildoras de otras sesiones que esperan (dentro de la escena)
+  $("#scenechips").innerHTML = waits().filter((x) => x.id !== S.sel).map((x) => '<button type="button" class="schip" data-act="goto" data-arg="' + x.id + '" data-fid="chip:' + x.id + '"><span class="badge ' + x.wait.kind + '"><i>' + ICO[x.wait.kind] + "</i>" + MOT[x.wait.kind] + "</span>" + esc(x.title) + ' · <time data-since="' + x.wait.since + '">' + mmss(T - x.wait.since) + "</time></button>").join("");
+  // marcador sobre la oficina del jefe
+  const w = s && s.wait && s.status !== "closed" ? s.wait : null;
+  $("#markers").innerHTML = w ? '<button type="button" class="marker ' + w.kind + '" id="mk" data-act="goto" data-arg="' + s.id + '" data-fid="marker" aria-label="' + MOT[w.kind] + ": " + esc(s.title) + ' te espera"><span class="ic" aria-hidden="true">' + ICO[w.kind] + "</span><span>" + MOT[w.kind] + ' · <time data-since="' + w.since + '">' + mmss(T - w.since) + "</time></span></button>" : "";
+  placeMarker();
+  // pastilla del panel colapsado
+  const pill = $("#panelpill"), n = waits().length, m = limitMode();
+  const lim = m.mode === "hit" ? "Límite alcanzado" : m.mode === "scanning" ? "calculando el %…" : m.mode === "nohits" ? "sin % estimado" : m.mode === "real" ? Math.round(m.pct) + " % (real)" : "~" + Math.round(estPct()) + " % (est.)";
+  pill.innerHTML = "<b>Panel</b> · " + (n ? n + (n === 1 ? " te espera" : " te esperan") : "nadie te espera") + " · " + lim;
+  pill.style.display = S.panelOpen ? "none" : "flex";
+}
+function placeMarker() {
+  const mk = $("#mk"); if (!mk || !bossAnchor) return;
+  const svg = $("#scene"), ctm = svg.getScreenCTM(); if (!ctm) return;
+  const pt = svg.createSVGPoint(); pt.x = bossAnchor.x; pt.y = bossAnchor.y;
+  const sp = pt.matrixTransform(ctm), r = $("#stage").getBoundingClientRect();
+  mk.style.left = Math.max(70, Math.min(r.width - 70, sp.x - r.left)) + "px"; mk.style.top = Math.max(40, sp.y - r.top) + "px";
+}
+
+/* ===== render: panel ===== */
+function renderPanel() {
+  const p = $("#panel"); p.hidden = !S.panelOpen; if (!S.panelOpen) return;
+  const n = waits().length;
+  const tabs = [["ahora", "Ahora" + (n ? ' <span class="cnt" aria-label="' + n + ' esperan">' + n + "</span>" : "")], ["consumo", "Consumo"], ["sesion", "Sesión"], ["opts", "Opciones"]];
+  let h = '<div class="phead"><h1>Panel</h1><button class="iconbtn" type="button" data-act="panel" data-fid="panelhide" title="Ocultar el panel y devolverle espacio al 3D" aria-label="Ocultar el panel">Ocultar &#8250;</button></div>';
+  h += '<div class="tabs" role="tablist" aria-label="Secciones del panel">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" aria-selected="' + (S.tab === k) + '" data-act="tab" data-arg="' + k + '" data-fid="tab:' + k + '">' + l + "</button>").join("") + "</div>";
+  h += '<div class="pbody" role="tabpanel">' + (S.tab === "ahora" ? tabAhora() : S.tab === "consumo" ? tabConsumo() : S.tab === "sesion" ? tabSesion() : tabOpts()) + "</div>";
+  const on = S.opts.real || S.opts.control;
+  h += '<div class="pfoot' + (on ? " on" : "") + '">' + (on ? "<span><b>Opciones activas:</b> " + [S.opts.real ? "% real" : "", S.opts.control ? "control" : ""].filter(Boolean).join(" + ") + ". Escribe en settings.json (con backup y deshacer).</span>" : "<span><b>Solo lectura.</b> Sin red, sin tokens, sin escribir en <code>~/.claude</code>.</span>") + '<button class="lnk" type="button" data-act="tab" data-arg="opts" data-fid="footopts">Opciones</button></div>';
+  const scroll = p.querySelector(".pbody") ? p.querySelector(".pbody").scrollTop : 0;
+  p.innerHTML = h; p.querySelector(".pbody").scrollTop = scroll;
+}
+function B(act, arg, text, cls, attrs) { return '<button type="button" class="btn ' + (cls || "") + '" data-act="' + act + '" data-arg="' + (arg == null ? "" : arg) + '" data-fid="' + act + ":" + (arg == null ? "" : arg) + '" ' + (attrs || "") + ">" + text + "</button>"; }
+function L(act, arg, text) { return '<button type="button" class="lnk" data-act="' + act + '" data-arg="' + (arg == null ? "" : arg) + '" data-fid="l' + act + ":" + (arg == null ? "" : arg) + '">' + text + "</button>"; }
+
+function tabAhora() {
+  const ws = waits();
+  let h = '<h2 id="hw">Te esperan <span class="cnt2">' + ws.length + "</span></h2>";
+  h += '<div aria-live="polite">' + S.notes.map((x) => '<div class="card ' + x.cls + '" role="status">' + esc(x.text) + "</div>").join("") + "</div>";
+  if (S.banner) h += '<div class="card warn" role="alert"><b>Abrí Claude: ' + esc(sess(S.banner.sid).title) + ' te espera.</b><br><span class="hint">Windows no me dejó traer la ventana al frente. No es un error: buscala en la barra de tareas.</span><div class="row">' + B("dismissBanner", "", "Entendido") + "</div></div>";
+  if (!ws.length) h += '<div class="empty"><b>Nadie te espera</b><p>Cuando una sesión necesite algo tuyo, aparece acá y como marcador en el 3D.</p></div>';
+  else h += '<ul class="wlist" aria-labelledby="hw">' + ws.map((s, i) => waitCard(s, ws, i)).join("") + "</ul>";
+  return h + limitCard();
+}
+function waitCard(s, ws, i) {
+  const w = s.wait, open = (S.exp || ws[0].id) === s.id;
+  let h = '<li class="wcard' + (s.id === S.sel ? " sel" : "") + '"><button type="button" class="whead" data-act="toggle" data-arg="' + s.id + '" data-fid="toggle:' + s.id + '" aria-expanded="' + open + '"><span class="badge ' + w.kind + '"><i aria-hidden="true">' + ICO[w.kind] + "</i>" + MOT[w.kind] + '</span><span class="tt"><b>' + esc(s.title) + '</b><span class="muted">' + esc(s.project) + '</span></span><time data-since="' + w.since + '" aria-label="esperando hace">' + mmss(T - w.since) + "</time></button>";
+  if (open) {
+    h += '<div class="wbody">';
+    if (w.kind === "turn") h += "<p>Main terminó su turno y no hay subagentes trabajando.</p><p class=\"hint\">Sale de esta lista cuando le escribas o a las 4 h (se cambia en config.json); después queda «inactiva».</p><div class=\"row\">" + B("seeTimeline", s.id, "Ver qué pasó", "primary") + B("claude", s.id, "Ir a Claude") + "</div>";
+    else if (w.kind === "question") h += questionBody(s);
+    else h += permissionBody(s);
+    h += "</div>";
+  }
+  return h + "</li>";
+}
+function roActions(s, r) {
+  return '<div class="row">' + B("claude", s.id, "Ir a Claude", "primary") + (r === "off" ? B("tab", "opts", "Ir a Opciones") : "") + (r === "down" ? B("hookup", "", "Reintentar canal") : "") + "</div>";
+}
+const ALERT_R = { down: 1, timeout: 1, format: 1 };
+function questionBody(s) {
+  const qs = QS[s.id], inter = canInteract(s), sending = S.sending[s.id], pk = S.pick[s.id] || [];
+  if (inter) {
+    const ok = answered(s.id);
+    return qs.map((q, qi) => "<fieldset" + (sending ? " disabled" : "") + "><legend>" + esc(q.t) + (q.multi ? ' <span class="muted" style="font-weight:400">(elegí una o más)</span>' : "") + "</legend>" +
+      q.o.map((o, oi) => { const on = q.multi ? (pk[qi] || []).includes(oi) : pk[qi] === oi; return '<label class="opt' + (on ? " sel" : "") + '"><input type="' + (q.multi ? "checkbox" : "radio") + '" name="q-' + s.id + "-" + qi + '" ' + (on ? "checked" : "") + ' data-act="pick" data-arg="' + s.id + "|" + qi + "|" + oi + '" data-fid="pick:' + s.id + "|" + qi + "|" + oi + '"><span>' + esc(o) + "</span></label>"; }).join("") + "</fieldset>").join("") +
+      '<div class="row">' + B("send", s.id, sending ? "Enviando…" : "Enviar respuesta", "primary", (!ok || sending ? "disabled" : "")) + B("release", s.id, "Contestar en Claude", "", sending ? "disabled" : "") + "</div>" +
+      '<p class="hint">' + (ok ? "" : (qs.length > 1 ? "Elegí al menos una opción en cada pregunta para poder enviar. " : "Elegí una opción para poder enviar. ")) + "Si ninguna sirve, «Otra» se contesta en Claude. Mientras no contestes, la sesión queda pausada: tenés <time data-until=\"" + (s.wait.since + CTL_TIMEOUT) + '">' + mmss(s.wait.since + CTL_TIMEOUT - T) + "</time> para contestar acá y después pasa a Claude.</p>";
+  }
+  const r = roReason(s);
+  return qs.map((q) => '<p class="q">' + esc(q.t) + (q.multi ? ' <span class="tag">selección múltiple</span>' : "") + '</p><ol class="ro">' + q.o.map((o) => "<li>" + esc(o) + "</li>").join("") + "</ol>").join("") + '<p><span class="tag">Solo lectura</span></p><p class="' + (ALERT_R[r] ? "" : "hint") + '">' + (ALERT_R[r] ? "<b>" + RO_MSG[r] + "</b>" : RO_MSG[r]) + "</p>" + roActions(s, r);
+}
+function permissionBody(s) {
+  const inter = canInteract(s), sending = S.sending[s.id];
+  const head = "<p>Pide permiso para usar <b>Bash</b>:</p><pre class=\"cmd\" tabindex=\"0\" aria-label=\"Comando completo\">" + esc(CMD[s.id]) + "</pre>" + (CMD[s.id].length > 120 ? '<p class="hint">Ves el comando completo (' + CMD[s.id].length + " caracteres). Recorrelo hasta el final antes de decidir.</p>" : "");
+  if (inter) return head + '<div class="row">' + B("allow", s.id, sending ? "Enviando…" : "Aprobar", "primary", sending ? "disabled" : "") + B("deny", s.id, "Rechazar", "danger", sending ? "disabled" : "") + B("release", s.id, "Decidir en Claude", "", sending ? "disabled" : "") + '</div><p class="hint">Tenés <time data-until="' + (s.wait.since + CTL_TIMEOUT) + '">' + mmss(s.wait.since + CTL_TIMEOUT - T) + "</time> para decidir acá y después pasa a Claude.</p>";
+  const r = roReason(s);
+  return head + '<p><span class="tag">Solo lectura</span></p><p class="' + (ALERT_R[r] ? "" : "hint") + '">' + (ALERT_R[r] ? "<b>" + RO_MSG[r] + "</b>" : RO_MSG[r].replace("contestar", "decidir").replace("Contestala", "Decidilo").replace("contestás", "decidís")) + "</p>" + roActions(s, r);
+}
+
+function limitCard() {
+  const m = limitMode(), tok = winTotal(), est = estPct(), pct = curPct();
+  const hot = pct !== null && pct >= 80;
+  let h = '<h2 id="hlimit">Límite de 5 h</h2><section class="card' + (hot ? " alert" : "") + '" aria-label="Límite de 5 horas">';
+  if (hot) h += '<p role="status"><b>Alerta: pasaste el 80 %.</b> Pausá, compactá o cerrá sesiones antes de chocar.</p>';
+  h += '<div class="big">' + fmtK(tok) + ' tokens <span class="muted" style="font-size:13px;font-weight:400">en esta ventana</span></div>';
+  if (m.mode === "hit") h += '<p><b>Límite alcanzado · se libera 16:00</b></p>';
+  else if (m.mode === "scanning") h += '<p class="scan" role="status"><b>Calculando el % (leyendo el historial)…</b><br><span class="hint">Tarda hasta 30 s. «Te esperan» y la escena no esperan al cálculo.</span></p>';
+  else if (m.mode === "nohits") h += '<p class="hint">Sin choques registrados para estimar el %. Cuando choques con el límite una vez, empiezo a estimarlo.</p>';
+  else {
+    const shown = m.mode === "real" ? m.pct : est;
+    h += '<div class="bar" role="img" aria-label="' + pctf(shown) + (m.mode === "real" ? " real" : " estimado") + ', umbral 80 %"><i class="' + (hot ? "hot" : "") + '" style="width:' + Math.min(100, shown) + '%"></i><u style="left:80%"></u></div><div class="barlbl"><span style="left:80%">umbral 80 %</span></div>';
+    if (m.mode === "real") h += "<p><b>" + Math.round(m.pct) + " % (real)</b> · se libera 16:00<br>7 días: " + S.real.d7 + " %</p>";
+    else {
+      h += "<p><b>~" + Math.round(est) + " % (estimado)</b> · se libera ~16:02 (estimado)</p>";
+      if (m.broken) h += '<p class="hint"><b>El % real dejó de llegar:</b> reemplazaste la status line y ya no pasa por Agent Office. Uso la estimación.</p>';
+      else if (m.stale) h += '<p class="hint">Último dato real: ' + Math.round(m.stale.pct) + " % hace " + Math.round(m.age / 60) + " min. Sin datos nuevos, uso la estimación.</p>";
+      else if (S.opts.real) h += '<p class="hint">Esperando el primer dato real: llega con la próxima respuesta de Claude Code.</p>';
+    }
+  }
+  h += '<details><summary class="lnk" style="display:inline">¿Cómo se calcula?</summary><p class="hint">' + (m.mode === "real" ? "El % lo informa Claude Code a través de tu status line. " : "El techo es la mediana de lo que consumiste en las 5 h previas a cada choque registrado en disco (3 choques). El uso desde claude.ai u otros dispositivos no aparece acá, así que puede fallar. ") + "Todo se calcula en tu PC, sin red y sin tokens.</p></details>";
+  h += '<div class="row">' + B("tab", "consumo", "Ver quién consume") + (S.sim.a0 && !S.opts.real && m.mode !== "hit" ? B("openReal", "", "Activar % real…") : "") + "</div></section>";
+  return h;
+}
+
+function tabConsumo() {
+  const total = winTotal(), keys = Object.keys(AG);
+  const rows = keys.map((k) => ({ k, t: sessTotal(k), name: (sess(k) || {}).title || TITLE_X[k], closed: !sess(k) })).sort((a, b) => b.t - a.t);
+  const ag = []; keys.forEach((k) => agents(k).forEach((a) => { if (!a.nodata) ag.push({ k, name: a.r + " · " + ((sess(k) || {}).title || TITLE_X[k]), t: a.tot }); }));
+  ag.sort((a, b) => b.t - a.t);
+  const rk = (arr, lim, unit) => arr.slice(0, lim).map((x) => '<div class="rank"><span class="nm">' + esc(x.name) + (x.closed ? ' <span class="muted">(cerrada)</span>' : "") + '</span><span class="num">' + fmtK(x.t) + " · " + pctf((x.t / total) * 100) + '</span><div class="bar"><i style="width:' + (x.t / total) * 100 + '%"></i></div></div>').join("") + (arr.length > lim ? '<p class="muted">+' + (arr.length - lim) + " " + unit + "</p>" : "");
+  let h = '<h2>Quién consume en esta ventana</h2><p class="hint">Total de la ventana: <b>' + fmtK(total) + " tokens</b>, sumando todas las sesiones (incluso cerradas).</p><h3>Sesiones</h3>" + rk(rows, 5, "sesiones") + "<h3>Agentes</h3>" + rk(ag, 5, "agentes");
+  h += "<h2>Dónde se van los tokens</h2>" + causeSummary(keys, "de la ventana") + '<div class="row">' + L("goSesion", "tokens", "Ver el desglose por agente de la sesión seleccionada") + "</div>";
+  return h;
+}
+function breakdown(a) {
+  const start = a.start || 0, rew = a.rew ? a.rew.tok : 0, rep = a.rep || 0;
+  return { start, rew, rep, growth: a.tot - start - rew - rep };
+}
+function causeSummary(keys, scope) {
+  let sub = 0, st = 0, rw = 0, rp = 0, gr = 0; const mod = {};
+  keys.forEach((k) => agents(k).forEach((a) => {
+    if (a.nodata) { if (a.r !== "Main") sub++; return; }
+    const b = breakdown(a); if (a.r !== "Main") sub++;
+    st += b.start; rw += b.rew; rp += b.rep; gr += b.growth; mod[a.m] = (mod[a.m] || 0) + a.tot;
+  }));
+  const tot = st + rw + rp + gr;
+  return '<div class="card"><div class="kv"><span>Subagentes lanzados ' + scope + '</span><span class="v">' + sub + '</span><span>Arranque (caché inicial)</span><span class="v">' + fmtN(st) + '</span><span>Crecimiento del contexto</span><span class="v">' + fmtN(gr) + '</span><span class="' + (rw ? "hot" : "") + '">Reescrituras de caché tras pausas</span><span class="v ' + (rw ? "hot" : "") + '">' + fmtN(rw) + '</span><span>Informes devueltos a Main</span><span class="v">' + approx(rp) + '</span><span class="sum">Total</span><span class="sumv">' + fmtN(tot) + "</span></div>" +
+    '<div class="muted" style="font-size:12px">Por modelo: ' + Object.entries(mod).map(([m, t]) => m + " " + fmtK(t)).join(" · ") + "</div></div>";
+}
+
+function tabSesion() {
+  const s = sess(S.sel); if (!s) return '<div class="empty"><b>Elegí una sesión en la barra lateral</b></div>';
+  let h = '<h2>' + esc(s.title) + ' <span class="cnt2">' + ({ working: "trabajando", waiting: "te espera", idle: "inactiva", closed: "cerrada" }[s.status]) + "</span></h2>";
+  h += '<div class="subtabs" role="tablist" aria-label="Vistas de la sesión">' + [["timeline", "Qué pasó"], ["flow", "Flujo"], ["tokens", "Tokens"]].map(([k, l]) => '<button class="subtab" role="tab" type="button" aria-selected="' + (S.sub === k) + '" data-act="sub" data-arg="' + k + '" data-fid="sub:' + k + '">' + l + "</button>").join("") + "</div>";
+  return h + (S.sub === "timeline" ? timeline(s) : S.sub === "flow" ? flowView(s) : tokensView(s));
+}
+function timeline(s) {
+  const evs = S.ev[s.id].slice().sort((a, b) => b[0] - a[0]);
+  let h = "";
+  if (S.partial[s.id]) h += '<div class="card info">Historia parcial: desde 10:31. El transcript es más grande que lo que leo de entrada; lo anterior no se muestra.</div>';
+  if (!evs.length) return '<div class="empty"><b>Todavía no pasó nada en esta sesión</b><p>Los eventos aparecen apenas Claude haga algo.</p></div>';
+  h += '<ul class="tl" aria-label="Línea de tiempo, de lo más nuevo a lo más viejo">';
+  h += '<p class="hint" style="margin-top:0">' + (S.sim.logOff ? "«Nuevo» marca todo lo que hay: el registro de uso está apagado y no sé cuándo miraste por última vez." : "«Nuevo» = desde la última vez que miraste la app (" + fmtDay(S.lastBlur).slice(0, 5) + ").") + "</p>";
+  for (const [id, t, who, kind, txt, ts] of evs) {
+    const isNew = S.sim.logOff ? true : (ts != null ? ts : parseHM(t)) > S.lastBlur;
+    const body = kind === "report" ? cut(txt, 120) : kind === "cmd" ? "<code>" + esc(cut(txt, 60)) + "</code>" : kind === "file" ? "<code>" + esc(txt) + "</code>" : esc(txt);
+    h += '<li class="' + (kind === "error" ? "err" : kind === "limit" ? "lim" : "") + '"><div class="meta"><b style="color:#e6e9ef">' + t + "</b><span>" + esc(who) + '</span><span class="kind">' + KIND[kind] + "</span>" + (isNew ? '<span class="badge new">nuevo</span>' : "") + "</div><div>" + (kind === "report" || kind === "launch" || kind === "error" || kind === "limit" || kind === "compact" ? esc(kind === "report" ? cut(txt, 120) : txt) : body) + "</div></li>";
+  }
+  return h + "</ul>" + '<p class="hint">Se arma en vivo desde los transcripts. Nada de esto se guarda en disco.</p>';
+}
+function flowFor(sid) {
+  if (sid === "b") return { nodes: [{ id: "main", l: "Main" }, { id: "a1", l: "architect", p: "main" }, { id: "a2", l: "coder", p: "main" }, { id: "a3", l: "tester", p: "main", pend: true }, { id: "a4", l: "debugger", p: "a2" }],
+    msgs: [{ k: "launch", f: "main", t: "a1", tok: 1000 }, { k: "launch", f: "main", t: "a2", tok: 2000 }, { k: "launch", f: "main", t: "a3", tok: 500 }, { k: "launch", f: "a2", t: "a4", tok: 750 },
+      { k: "send", f: "main", t: "a2", tok: 200, n: 2 }, { k: "send", f: "a2", t: "a3", tok: 300, peer: true },
+      { k: "report", f: "a1", t: "main", tok: 1500 }, { k: "report", f: "a2", t: "main", tok: 1500 }, { k: "report", f: "a4", t: "a2", tok: 1000 }, { k: "report", f: "a3", t: "main", pend: true }] };
+  const subs = AG[sid].filter((a) => a.r !== "Main"); if (!subs.length) return { nodes: [{ id: "main", l: "Main" }], msgs: [] };
+  const nodes = [{ id: "main", l: "Main" }], msgs = [];
+  subs.forEach((a, i) => { nodes.push({ id: "a" + (i + 1), l: a.r, p: "main", pend: !!a.nodata }); msgs.push({ k: "launch", f: "main", t: "a" + (i + 1), tok: 1000 }); msgs.push(a.nodata ? { k: "report", f: "a" + (i + 1), t: "main", pend: true } : { k: "report", f: "a" + (i + 1), t: "main", tok: a.rep }); });
+  return { nodes, msgs };
+}
+function flowView(s) {
+  const f = flowFor(s.id);
+  if (f.nodes.length === 1) return '<div class="empty"><b>Main no lanzó subagentes</b><p>Todo el trabajo de esta sesión lo hizo Main.</p></div>';
+  const lvl1 = f.nodes.filter((n) => n.p === "main"), pos = { main: { x: 170, y: 36 } };
+  lvl1.forEach((n, i) => { pos[n.id] = { x: lvl1.length === 1 ? 170 : 55 + i * (230 / (lvl1.length - 1)), y: 140 }; });
+  f.nodes.filter((n) => n.p && n.p !== "main").forEach((n) => { pos[n.id] = { x: pos[n.p].x, y: 242 }; });
+  const nm = (id) => f.nodes.find((n) => n.id === id).l;
+  let g = '<defs><marker id="ah" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#8d97a8"/></marker><marker id="ao" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#f2a24e"/></marker></defs>';
+  const edge = (m) => {
+    const a = pos[m.f], b = pos[m.t]; if (m.k === "send" && m.f === "main") return "";
+    const down = b.y > a.y, up = b.y < a.y, off = m.k === "report" ? 9 : -9;
+    if (m.peer) return '<line x1="' + (a.x + 38) + '" y1="' + a.y + '" x2="' + (b.x - 40) + '" y2="' + b.y + '" stroke="#f2a24e" stroke-width="3" stroke-dasharray="6 3" marker-end="url(#ao)"/><text x="' + (a.x + b.x) / 2 + '" y="' + (a.y + 34) + '" text-anchor="middle" font-size="10" font-weight="700" fill="#f2a24e">subagente a subagente</text>';
+    const x1 = a.x + off, x2 = b.x + off, y1 = down ? a.y + 15 : a.y - 15, y2 = down ? b.y - 15 : b.y + 15;
+    const col = m.pend ? "#6c7a89" : "#8d97a8", lab = m.pend ? "pendiente" : approx(m.tok), tag = m.k === "launch" ? "lanza" : "informe";
+    return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + col + '" stroke-width="1.6" ' + (m.k === "report" ? 'stroke-dasharray="3 3"' : "") + ' marker-end="url(#ah)"/><text x="' + ((x1 + x2) / 2 + (m.k === "report" ? 12 : -12)) + '" y="' + ((y1 + y2) / 2 + 3) + '" text-anchor="' + (m.k === "report" ? "start" : "end") + '" font-size="9" fill="#c5cddb">' + tag + " " + lab + "</text>";
+  };
+  f.msgs.forEach((m) => { if (m.k !== "send" || m.peer) g += edge(m); });
+  f.nodes.forEach((n) => { const p = pos[n.id]; g += '<rect x="' + (p.x - 36) + '" y="' + (p.y - 15) + '" width="72" height="30" rx="8" fill="' + (n.id === "main" ? "#3a6ea5" : "#2a303c") + '" stroke="' + (n.pend ? "#f2c94c" : "#4f7cac") + '" ' + (n.pend ? 'stroke-dasharray="4 3"' : "") + '/><text x="' + p.x + '" y="' + (p.y + 4) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">' + esc(n.l) + "</text>" + (n.pend ? '<text x="' + p.x + '" y="' + (p.y + 28) + '" text-anchor="middle" font-size="9" fill="#f2c94c">informe pendiente</text>' : ""); });
+  const svg = '<svg class="flowsvg" viewBox="0 0 340 ' + (f.nodes.some((n) => n.p && n.p !== "main") ? 285 : 195) + '" role="img" aria-label="Diagrama: Main en el centro lanza a ' + (lvl1.length) + ' subagentes y recibe sus informes. La tabla de abajo tiene el detalle.">' + g + "</svg>";
+  const tot = f.msgs.reduce((n, m) => n + (m.pend ? 0 : (m.tok || 0) * (m.n || 1)), 0), sessTok = sessTotal(s.id);
+  const rows = f.msgs.map((m) => '<tr class="' + (m.peer ? "peer" : "") + '"><td>' + esc(nm(m.f)) + " → " + esc(nm(m.t)) + (m.peer ? "<br>subagente a subagente" : "") + "</td><td>" + ({ launch: "Lanzamiento", send: "Mensaje" + (m.n ? " ×" + m.n : ""), report: "Informe" }[m.k]) + '</td><td class="r">' + (m.pend ? "pendiente" : approx(m.tok)) + "</td></tr>").join("");
+  const peers = f.msgs.filter((m) => m.peer).length;
+  return '<p class="hint">Main está en el centro: ' + (peers ? "casi todo pasa por él, salvo " + peers + " mensaje directo entre subagentes (resaltado)." : "los subagentes no se hablan entre ellos: todo pasa por Main.") + (f.nodes.some((n) => n.p && n.p !== "main") ? " El debugger cuelga del coder, que fue quien lo lanzó." : "") + "</p>" + svg +
+    '<p style="margin:8px 0"><b>Mensajes entre agentes: ' + approx(tot) + " tokens, " + ((tot / sessTok) * 100).toFixed(1).replace(".", ",") + " % de los tokens de la sesión.</b><br><span class=\"hint\">Estimado a 4 caracteres por token (por eso el «~»). Los agentes pesan mucho más que lo que se dicen: mirá la pestaña Tokens.</span></p>" +
+    '<table class="t"><thead><tr><th>De → a</th><th>Tipo</th><th class="r">Tamaño</th></tr></thead><tbody>' + rows + "</tbody></table>";
+}
+function tokensView(s) {
+  const ags = agents(s.id), subs = ags.filter((a) => a.r !== "Main").length;
+  const mod = {}; let st = 0; ags.forEach((a) => { if (a.nodata) return; mod[a.m] = (mod[a.m] || 0) + a.tot; st += breakdown(a).start; });
+  let h = '<div class="card"><b>' + subs + " subagente" + (subs === 1 ? "" : "s") + " lanzado" + (subs === 1 ? "" : "s") + "</b> · arranque total " + fmtN(st) + " tokens<br><span class=\"muted\">Por modelo: " + Object.entries(mod).map(([m, t]) => m + " " + fmtK(t)).join(" · ") + "</span></div>";
+  h += '<p class="hint">Cifras exactas de lo que Claude Code anota en cada mensaje (los informes son estimados, con «~»).</p>';
+  h += ags.slice().sort((a, b) => b.tot - a.tot).map((a) => {
+    if (a.nodata) return '<details class="ag"><summary><b>' + esc(a.r) + '</b><span class="muted">' + a.m + '</span><span class="tot">sin datos de tokens</span></summary><p class="hint">Todavía no hay mensajes con uso de este agente. No es un error.</p></details>';
+    const b = breakdown(a), pieces = [["Arranque", b.start, "#6fcf97"], ["Crecimiento del contexto", b.growth, "#4f7cac"], ["Reescritura de caché tras pausa", b.rew, "#e07b39"], ["Informe a Main", b.rep, "#b58cf0"]].filter((x) => x[1] > 0);
+    return '<details class="ag"' + (a.rew ? " open" : "") + "><summary><b>" + esc(a.r) + '</b><span class="muted">' + a.m + '</span><span class="tot">' + fmtN(a.tot) + '</span></summary><div class="stack" role="img" aria-label="Reparto de los ' + fmtN(a.tot) + ' tokens">' + pieces.map((x) => '<span style="width:' + (x[1] / a.tot) * 100 + "%;background:" + x[2] + '"></span>').join("") + '</div><div class="legend">' + pieces.map((x) => '<span><i style="background:' + x[2] + '"></i>' + x[0] + "</span>").join("") + "</div>" +
+      '<div class="kv" style="margin-top:8px">' + (a.r === "Main" ? "" : "<span>Arranque</span><span class=\"v\">" + fmtN(b.start) + "</span>") + "<span>Crecimiento del contexto</span><span class=\"v\">" + fmtN(b.growth) + "</span>" +
+      (a.rew ? '<span class="hot">Reescritura de caché tras pausa<br><span style="font-weight:400">a las ' + a.rew.at + ", tras " + a.rew.pause + ' min parado</span></span><span class="v hot">' + fmtN(b.rew) + "</span>" : "") +
+      (b.rep ? "<span>Informe devuelto a Main</span><span class=\"v\">" + approx(b.rep) + "</span>" : "") + '<span class="sum">Total</span><span class="sumv">' + fmtN(a.tot) + "</span></div>" +
+      (a.rew ? '<p class="hint">Los subagentes guardan su caché 5 min. Si se paran más que eso, al volver reescriben todo el contexto de una vez.</p>' : "") + "</details>";
+  }).join("");
+  return h;
+}
+
+function tabOpts() {
+  const o = S.opts;
+  let h = '<p class="hint">Por defecto Agent Office <b>no escribe nada</b> en tu configuración de Claude. Estas dos opciones son independientes, apagadas por defecto, y cada una te muestra qué hace antes de activarse. El resto se cambia en <code>config.json</code>.</p>';
+  // % real
+  h += '<section class="card"><h3 style="margin-top:0">% real del límite de 5 h</h3>';
+  if (!S.sim.a0) h += '<p><span class="tag">No disponible</span></p><p class="hint">La prueba 0A no mostró el % real en la app de escritorio, así que seguís con la estimación.</p>';
+  else if (!o.real) h += '<p><span class="tag">Apagado</span> Hoy ves un % estimado.</p><p class="hint">Activarla agrega una <code>statusLine</code> a settings.json (con backup). ' + (S.sim.ownSL ? "Tu barra actual se mantiene." : "") + "</p>" + (o.realNote ? '<p class="card info" role="status">' + esc(o.realNote) + "</p>" : "") + '<div class="row">' + B("openReal", "", "Activar % real…", "primary") + "</div>";
+  else h += '<p><span class="tag">' + (S.sim.slChanged ? "Dejó de llegar" : "Activo") + "</span> Cambia solo <code>statusLine</code> en <code>" + SETTINGS_PATH + "</code>.</p>" +
+    (S.sim.slChanged ? '<p class="card warn" role="status"><b>El % real dejó de llegar:</b> reemplazaste la status line y ya no pasa por el encadenador de Agent Office. Mientras tanto ves el % estimado. Al deshacer, no toco tu status line.</p>' : "") +
+    '<p class="hint">Backup propio: <code>' + BACKUP_REAL + "</code><br>" + (S.sim.ownSL ? "Tu status line original (<code>" + OWN_CMD + "</code>) está guardada en <code>" + CFG_PATH + "</code> y en el backup; el encadenador la sigue llamando y muestra su salida tal cual." : "") + '</p><div class="row">' + B("undoReal", "", "Deshacer % real…", "danger") + "</div>";
+  h += "</section>";
+  // control
+  h += '<section class="card"><h3 style="margin-top:0">Control desde Agent Office</h3>';
+  const part = (ok) => (ok ? "disponible" : "no disponible (falló la prueba 0B): ahí ves la pregunta y vas a Claude");
+  if (!S.sim.q0 && !S.sim.p0) h += '<p><span class="tag">No disponible</span></p><p class="hint">Ninguna parte pasó la prueba 0B. Seguís viendo preguntas y permisos en solo lectura, con «Ir a Claude».</p>';
+  else {
+    h += '<ul style="margin:4px 0;padding-left:18px"><li>Responder preguntas: ' + part(S.sim.q0) + "</li><li>Aprobar o rechazar permisos: " + part(S.sim.p0) + "</li></ul>";
+    if (!o.control) h += '<p><span class="tag">Apagado</span> Contestás en Claude.</p>' + (o.ctlNote ? '<p class="card info" role="status">' + esc(o.ctlNote) + "</p>" : "") + '<div class="row">' + B("openCtl", "", "Activar control…", "primary") + "</div>";
+    else {
+      h += '<p><span class="tag">' + (o.ctlState === "down" ? "Sin respuesta" : "Activo") + "</span> Hooks en <code>" + SETTINGS_PATH + "</code> y un canal local solo en esta PC.</p>";
+      h += o.ctlState === "down" ? '<p class="card warn" role="alert"><b>El canal con Claude no responde.</b> Las preguntas y permisos se ven en solo lectura: contestá en Claude. Tu sesión no queda trabada.<br>' + B("hookup", "", "Reintentar canal") + "</p>" : '<p class="hint">Canal: funcionando. Si no contestás en ' + CTL_TIMEOUT + " s, el hook se libera y Claude pregunta él (se cambia en config.json, entre 15 y 600 s). Con Agent Office cerrado, Claude pregunta como siempre.<br>Backup propio: <code>" + BACKUP_CTL + "</code></p>";
+      h += '<div class="row">' + B("undoCtl", "", "Deshacer control…", "danger") + "</div>";
+    }
+  }
+  h += "</section>";
+  // avisos de Windows (solo lectura)
+  h += '<section class="card"><h3 style="margin-top:0">Avisos de Windows</h3><ul style="margin:4px 0;padding-left:18px"><li>Permiso: <b>prendido</b></li><li>Límite de 5 h (umbral 80 %): <b>prendido</b></li><li>Pregunta: <b>' + (S.sim.nQ ? "prendido" : questionAutoOn() ? "prendido solo, mientras el control esté activo" : "apagado") + "</b> " + (S.sim.nQ ? "" : questionAutoOn() ? "(Claude no avisa mientras Agent Office retiene la pregunta; al deshacer el control vuelve a apagado)" : "(Claude ya avisa)") + "</li><li>Terminó: <b>" + (S.sim.nT ? "prendido" : "apagado") + "</b> (Claude ya avisa)</li></ul>" +
+    '<p class="hint">Los avisos solo muestran el título de la sesión y el motivo, nunca preguntas, rutas ni comandos. Windows puede guardarlos en su centro de notificaciones. Avisan siempre que la ventana no tenga el foco (minimizada, visible al costado o tapada); con el foco alcanza con el panel. <b>Si la cerrás, Agent Office se cierra y no avisa</b>. Se cambian en <code>config.json</code>. Esta tarjeta solo informa.</p>' +
+    (S.winNote ? '<p class="card info" role="status">Windows no entregó el último aviso (revisá Configuración &gt; Sistema &gt; Notificaciones). Igual lo ves en «Te esperan».</p>' : "") + "</section>";
+  // medicion
+  h += '<section class="card"><h3 style="margin-top:0">Registro de uso (para medir si te sirve)</h3>' + (S.sim.logOff ? '<p><span class="tag">Apagado</span> No se anota nada. Las notificaciones salen igual. Como no sé cuándo miraste por última vez, «nuevo» marca todo lo que hay.</p>' : '<p><span class="tag">Prendido</span> Guarda solo hora, tipo y id de sesión: cuándo te avisó, cuándo tocaste un aviso, cuándo perdió o recuperó el foco la ventana y tus acciones (clics en tarjetas, píldoras o marcadores, cambio de pestaña, «Ir a Claude», respuestas). Nunca textos, rutas ni comandos. Pesa 1 MB como máximo.</p><p>Referencia de «nuevo»: la última vez que miraste la app, a las <b>' + fmtDay(S.lastBlur) + "</b>. Se guarda en este registro y sobrevive al reinicio.</p>") + '<p class="hint">Archivo: <code>%LOCALAPPDATA%\\agent-office\\usage.log</code>. Se apaga con <code>usageLog: false</code> en <code>config.json</code>.</p>' +
+    (S.sim.logOff ? "" : '<details><summary class="lnk" style="display:inline">Ver las últimas marcas</summary><pre class="mono" style="margin:6px 0;white-space:pre-wrap">' + (S.log.slice(0, 6).map(esc).join("\n") || "(todavía sin marcas)") + "</pre></details>") + "</section>";
+  return h;
+}
+
+/* ===== render: escritorio, ventana de Claude, avisos, modales ===== */
+function claudeDlg(s, w) {
+  const bt = (k, t) => '<button class="copt" type="button" data-act="claudeAns" data-arg="' + s.id + '" data-fid="cans:' + s.id + k + '">' + esc(t) + "</button>";
+  if (w.kind === "question") {
+    const qs = QS[s.id];
+    if (qs.length === 1 && !qs[0].multi) return "<p><b>" + esc(qs[0].t) + "</b></p>" + qs[0].o.map((o) => bt(o, o)).join("") + bt("otra", "Otra… (escribir)");
+    return qs.map((q) => "<p><b>" + esc(q.t) + "</b>" + (q.multi ? " (elegí una o más)" : "") + "</p><p>" + q.o.map(esc).join(" · ") + ", Otra…</p>").join("") + bt("todo", "Responder todo (simulado)");
+  }
+  if (w.kind === "permission") return "<p><b>¿Permitir ejecutar este comando?</b></p><pre class=\"cmd\">" + esc(CMD[s.id]) + "</pre>" + bt("ok", "Permitir") + bt("no", "Rechazar");
+  return "<p><b>Tarea terminada.</b> Esperando tu próximo mensaje.</p>" + bt("msg", "Escribirle un mensaje (simulado)");
+}
+function renderDesktop() {
+  $("#win").hidden = S.minimized || S.appClosed;
+  $("#cover").hidden = !S.covered || S.minimized || S.appClosed;
+  $("#titlebar").classList.toggle("unf", !hasFocus());
+  $("#unftag").hidden = hasFocus() || S.minimized || S.appClosed;
+  $("#wallpaper").style.display = S.minimized || S.appClosed ? "flex" : "none";
+  const n = waits().length;
+  $("#tbbtn").textContent = S.appClosed ? "Abrir Agent Office" : "Agent Office" + (n && S.minimized ? " (" + n + " te esperan)" : "") + (S.minimized ? " · minimizado" : "");
+  $("#tbbtn").setAttribute("aria-label", S.appClosed ? "Abrir Agent Office" : S.minimized ? "Restaurar Agent Office" : "Agent Office");
+  if (S.minimized) $("#wallcard").innerHTML = "<b>Agent Office está minimizado</b><br>Sigue vigilando tus sesiones. Si una te espera por un motivo avisable, Windows te muestra una notificación. Tocala para volver.";
+  else if (S.appClosed) {
+    const ws = waits();
+    $("#wallcard").innerHTML = "<b>Agent Office está cerrado</b><br>No avisa ni vigila. Claude funciona como siempre: " + (ws.length ? "te pregunta él mismo." : "no hay nada pendiente.") + '<div class="row" style="justify-content:center">' + B("reopen", "", "Abrir Agent Office", "primary") + "</div>" +
+      (ws.length ? '<div style="text-align:left;margin-top:10px">' + ws.map((s) => '<div class="card"><b>' + esc(s.title) + "</b> · " + MOT[s.wait.kind] + '<br><span class="hint">Diálogo de Claude (simulado):</span><br>' + claudeDlg(s, s.wait) + "</div>").join("") + "</div>" : "");
+  }
+  // ventana de Claude simulada
+  const cl = $("#claude");
+  if (S.claudeOpen && !S.appClosed && !S.minimized) {
+    const s = sess(S.claudeOpen), w = s && s.wait;
+    cl.hidden = false;
+    cl.innerHTML = '<div class="ct"><span>Claude · ' + (s ? esc(s.title) : "") + '</span><span style="flex:1"></span><span style="font-weight:400;font-size:11px">(app de escritorio, simulada)</span></div><div class="cb">' +
+      (w ? claudeDlg(s, w) : "<p>Esta sesión ya no te espera.</p>") +
+      '<div class="row"><button class="btn" type="button" data-act="backAO" data-fid="backAO">Volver a Agent Office</button></div></div>';
+  } else { cl.hidden = true; cl.innerHTML = ""; }
+  $("#toasts").innerHTML = S.toasts.map((t) => '<button class="toast" type="button" data-act="toast" data-arg="' + (t.sid || "") + '" data-fid="toast:' + t.id + '"><span class="tag-sim">Windows (simulado)</span><div class="app">&#9632; Agent Office</div><div class="ttl">' + esc(t.title) + "</div><div>" + esc(t.body) + "</div></button>").join("");
+}
+function renderModal() {
+  const root = $("#modal-root"), m = S.modal;
+  if (!m) { root.className = ""; root.innerHTML = ""; if (window.__lastFocus) window.__lastFocus.focus(); return; }
+  root.className = "open";
+  let h = "";
+  const kind = m.kind;
+  if (m.type === "enable-real") {
+    h = '<h2 id="mt">Activar el % real del límite</h2><p>Hoy Agent Office estima el %. Con esto lo lee directo de Claude Code.</p><dl>' +
+      "<dt>Qué voy a escribir</dt><dd><pre>\"statusLine\": {\n  \"type\": \"command\",\n  \"command\": \"agent-office-statusline.exe\"\n}</pre></dd>" +
+      "<dt>En qué archivo</dt><dd><code>" + SETTINGS_PATH + "</code></dd><dt>Backup de esta opción</dt><dd>Antes de escribir copio el archivo a <code>" + BACKUP_REAL + "</code>. El control tiene su propio backup, con otro nombre: uno nunca pisa al otro.</dd>" +
+      "<dt>Tu barra actual</dt><dd>" + (S.sim.ownSL ? '<b>Ya tenés una <code>statusLine</code> y la voy a reemplazar</b> por el encadenador de Agent Office. El encadenador ejecuta tu comando (<code>' + OWN_CMD + '</code>) y muestra su salida tal cual, así tu barra sigue igual. Tu comando original queda guardado en <code>' + CFG_PATH + "</code> y dentro del backup." : "No tenés una <code>statusLine</code>: agrego una que no muestra nada en la barra.") + "</dd>" +
+      "<dt>Cómo deshacer</dt><dd>Opciones &gt; Deshacer % real. Si nada cambió y el control está apagado, restauro el archivo exacto desde este backup. Si cambiaste el archivo después, o el control está activo, quito solo lo mío. Si cambiaste tu statusLine, no la toco y te aviso.</dd></dl>" +
+      '<ul class="checks"><li>No gasta tokens.</li><li>No usa internet: solo recibe datos de Claude Code en esta PC.</li><li>' + (S.sim.ownSL ? "Cambia solo la clave <code>statusLine</code> (la tuya se reemplaza por el encadenador); no toca las demás." : "Solo agrega la clave <code>statusLine</code>; no toca las demás.") + '</li></ul><p class="hint">Si cancelás, no cambio nada y seguís con la estimación.</p>' +
+      '<div class="actions"><button class="btn" type="button" data-act="mclose" data-autofocus>Cancelar</button><button class="btn primary" type="button" data-act="mok" data-arg="real">Escribir en settings.json y activar</button></div>';
+  } else if (m.type === "enable-ctl") {
+    h = '<h2 id="mt">Activar el control desde Agent Office</h2><p>Con esto contestás preguntas de Main y aprobás permisos sin cambiar de ventana.</p><dl><dt>Qué voy a escribir</dt><dd><pre>' +
+      (S.sim.q0 ? "hooks.PreToolUse  → matcher \"AskUserQuestion\"   (responder preguntas)\n" : "") + (S.sim.p0 ? "hooks.PermissionRequest                       (aprobar o rechazar permisos)" : "") +
+      "</pre>Son hooks de tipo <code>command</code>; nunca <code>prompt</code> ni <code>agent</code>, así que nunca gastan tokens.</dd>" +
+      (!S.sim.q0 || !S.sim.p0 ? "<dt>Qué queda afuera</dt><dd>" + (!S.sim.q0 ? "Responder preguntas" : "Aprobar permisos") + " no pasó la prueba 0B en tu equipo: esa parte sigue en solo lectura con «Ir a Claude».</dd>" : "") +
+      "<dt>En qué archivo</dt><dd><code>" + SETTINGS_PATH + "</code></dd><dt>Backup de esta opción</dt><dd><code>" + BACKUP_CTL + "</code>. El % real tiene su propio backup, con otro nombre: uno nunca pisa al otro.</dd>" +
+      "<dt>Canal local</dt><dd>Un canal solo en esta PC conecta el hook con Agent Office. No sale a internet.</dd>" +
+      "<dt>Cómo funciona</dt><dd>Cuando Claude pregunta o pide permiso, el hook espera tu decisión en Agent Office y esa sesión queda pausada hasta <b>" + CTL_TIMEOUT + " s</b> (se cambia en <code>config.json</code>, entre 15 y 600 s); después se libera y Claude pregunta él. Con «Contestar en Claude» lo liberás antes y decidís allá. Si Agent Office está cerrado o el canal se cae, el hook se libera enseguida (2 s o menos) y Claude pregunta como siempre. Cada pregunta o permiso lanza un proceso corto de Windows. La opción «Otra» de una pregunta se contesta en Claude.</dd>" +
+      "<dt>Cómo deshacer</dt><dd>Opciones &gt; Deshacer control. Saca solo mis hooks; los tuyos y el resto del archivo quedan como están.</dd></dl>" +
+      '<ul class="checks"><li>No gasta tokens.</li><li>Solo agrega los hooks de arriba; tus hooks y las demás claves quedan intactos.</li><li>Decidís vos cada pregunta y cada permiso, de a uno.</li></ul>' +
+      '<div class="actions"><button class="btn" type="button" data-act="mclose" data-autofocus>Cancelar</button><button class="btn primary" type="button" data-act="mok" data-arg="ctl">Escribir en settings.json y activar</button></div>';
+  } else if (m.type === "undo") {
+    const real = m.kind === "real", v = undoVariant(m.kind), bk = real ? BACKUP_REAL : BACKUP_CTL, otherN = real ? "el control" : "el % real";
+    h = '<h2 id="mt">' + (real ? "Deshacer el % real" : "Deshacer el control") + "</h2>" + (
+      v === "slchanged" ? "<p><b>Tu status line cambió después de activar.</b> No la toco: la dejo como está. Quito solo lo demás que agregó Agent Office y <b>no restauro el archivo entero</b>.</p>" :
+      v === "other" ? "<p><b>" + otherN.charAt(0).toUpperCase() + otherN.slice(1) + " sigue activo.</b> Voy a quitar solo lo mío (" + (real ? "tu <code>statusLine</code> original vuelve a su lugar" : "mis hooks") + ") y no restauro el archivo entero: eso borraría lo de " + otherN + ". Cada opción tiene su propio backup.</p>" :
+      v === "edited" ? "<p><b>Cambiaste settings.json después de activar esta opción.</b> Voy a quitar solo lo que agregó Agent Office (" + (real ? "tu <code>statusLine</code> original vuelve a su lugar" : "mis hooks") + "). Tus cambios nuevos se conservan y <b>no restauro el archivo entero</b>.</p>" :
+      "<p>Voy a restaurar <code>settings.json</code> exacto desde el backup de esta opción (<code>" + bk + "</code>). Tu archivo vuelve a como estaba antes de activar.</p>") +
+      "<p class=\"hint\">" + (real ? "El panel vuelve a mostrar el % estimado." : "Dejan de lanzarse procesos de hook. Lo que esté pendiente se contesta en Claude.") + "</p>" +
+      '<div class="actions"><button class="btn" type="button" data-act="mclose" data-autofocus>Cancelar</button><button class="btn danger" type="button" data-act="mundo" data-arg="' + m.kind + '">Deshacer</button></div>';
+  } else if (m.type === "error") {
+    const broken = m.cause === "broken";
+    h = '<h2 id="mt">No escribí nada</h2><p role="alert">' + (broken ? "<b><code>settings.json</code> tiene un error de formato</b> (línea 14: falta una coma). Por eso no lo toqué." : "<b>Otro programa tiene abierto <code>settings.json</code></b> y no me deja escribir.") + "</p><p>Tu archivo quedó exactamente igual que antes y no se creó ningún backup.</p><p>" + (broken ? "Corregilo (o restauralo desde tu último backup) y volvé a intentar." : "Cerrá ese programa y volvé a intentar.") + "</p>" +
+      '<div class="actions"><button class="btn" type="button" data-act="mclose" data-autofocus>Cerrar</button><button class="btn primary" type="button" data-act="mretry" data-arg="' + m.kind + '">Reintentar</button></div>';
+  }
+  root.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt">' + h + "</div>";
+  const f = root.querySelector("[data-autofocus]"); if (f) f.focus();
+}
+
+function updateTimers() {
+  document.querySelectorAll("time[data-since]").forEach((el) => { el.textContent = mmss(T - Number(el.dataset.since)); });
+  document.querySelectorAll("time[data-until]").forEach((el) => { el.textContent = mmss(Number(el.dataset.until) - T); });
+}
+function render() {
+  const ae = document.activeElement, fid = ae && ae.dataset ? ae.dataset.fid : null;
+  renderSidebar(); renderScene(); renderPanel(); renderDesktop(); placeMarker();
+  if (S.focusLimit) { S.focusLimit = false; const hl = document.getElementById("hlimit"); if (hl) hl.scrollIntoView({ block: "start" }); }
+  if (fid) { const el = document.querySelector('[data-fid="' + CSS.escape(fid) + '"]'); if (el && el !== document.activeElement && !S.modal) el.focus({ preventScroll: true }); }
+}
+
+/* ===== eventos ===== */
+document.addEventListener("click", (e) => {
+  const sim = e.target.closest("[data-sim]");
+  if (sim) { SIM[sim.dataset.sim](); render(); return; }
+  const el = e.target.closest("[data-act]"); if (!el) return;
+  const a = el.dataset.act, arg = el.dataset.arg;
+  if (el.disabled) return;
+  if (!S.modal && el.closest("#modal-root")) return;
+  if (!el.closest("#modal-root")) window.__lastFocus = el;
+  switch (a) {
+    case "min": if (hasFocus()) lostFocus("minimizado"); S.minimized = true; break;
+    case "close": appClose(); break;
+    case "tb": if (S.appClosed || S.minimized) restore(null); else { if (hasFocus()) lostFocus("minimizado"); S.minimized = true; } break;
+    case "uncover": restore(null); break;
+    case "reopen": restore(null); break;
+    case "sb": S.sbOpen = !S.sbOpen; break;
+    case "panel": S.panelOpen = !S.panelOpen; break;
+    case "build": select(arg); break;
+    case "floor": S.floor = arg; break;
+    case "tab": if (S.tab !== arg) logEv("cambio de pestaña", "-"); S.tab = arg; break;
+    case "sub": S.sub = arg; break;
+    case "goSesion": S.tab = "sesion"; S.sub = "tokens"; break;
+    case "goto": goto(arg); S.tab = "ahora"; S.panelOpen = true; break;
+    case "toggle": { const wasOpen = S.exp === arg || (!S.exp && waits()[0] && waits()[0].id === arg); select(arg); S.exp = wasOpen ? "-" : arg; break; }
+    case "seeTimeline": select(arg); S.tab = "sesion"; S.sub = "timeline"; break;
+    case "pick": { const [id, qi, oi] = arg.split("|"); pickOpt(id, Number(qi), Number(oi)); break; }
+    case "send": sendAnswer(arg); return;
+    case "allow": decide(arg, "allow"); return;
+    case "deny": decide(arg, "deny"); return;
+    case "release": releaseToClaude(arg); return;
+    case "claude": logEv("Ir a Claude", arg); goClaude(arg); return;
+    case "claudeAns": claudeAnswer(arg); return;
+    case "backAO": S.claudeOpen = null; break;
+    case "dismissBanner": S.banner = null; break;
+    case "hookup": S.opts.ctlState = "ok"; break;
+    case "openReal": openModal({ type: "enable-real", kind: "real" }); return;
+    case "openCtl": openModal({ type: "enable-ctl", kind: "ctl" }); return;
+    case "undoReal": openModal({ type: "undo", kind: "real" }); return;
+    case "undoCtl": openModal({ type: "undo", kind: "ctl" }); return;
+    case "mclose": closeModal(); render(); return;
+    case "mok": confirmEnable(arg); return;
+    case "mundo": confirmUndo(arg); return;
+    case "mretry": openModal({ type: arg === "real" ? "enable-real" : "enable-ctl", kind: arg }); return;
+    case "toast": {
+      const t = S.toasts.find((x) => String(x.id) === (el.dataset.fid || "").replace("toast:", "")) || {};
+      S.toasts = S.toasts.filter((x) => x !== t); logEv("clic en aviso", t.sid || "-");
+      // Paso 0C: si el clic no puede elegir la sesión, la app vuelve con la pestaña Ahora y la sesión que más espera primera, sin seleccionar nada.
+      restore(S.sim.c0 && !t.limit ? t.sid || null : null);
+      if (t.limit) S.focusLimit = true; // la alerta de límite abre Ahora > Límite de 5 h
+      break;
+    }
+  }
+  render();
+});
+document.addEventListener("change", (e) => {
+  const k = e.target.dataset && e.target.dataset.simset; if (!k) return;
+  S.sim[k] = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+  if (k === "noHits") S.hit = null;
+  render();
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.modal) { closeModal(); render(); } });
+window.addEventListener("resize", () => placeMarker());
+setInterval(() => { T++; updateTimers(); checkTimeouts(); }, 1000);
+/* Darle clic a la ventana le da el foco (y marca el foco en el registro). */
+document.addEventListener("mousedown", (e) => {
+  if (!S.focus && !S.minimized && !S.covered && !S.appClosed && e.target.closest("#win")) { S.focus = true; logEv("foco", "-"); render(); }
+});
+
+init(); render();
+</script>
+</body>
+</html>

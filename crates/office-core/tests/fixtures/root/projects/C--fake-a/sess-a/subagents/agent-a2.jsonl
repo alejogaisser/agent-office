@@ -1,0 +1,2 @@
+{"type":"user","timestamp":"2026-11-17T10:00:03.500Z","isSidechain":true,"message":{"role":"user","content":"synthetic background prompt"}}
+{"type":"assistant","timestamp":"2026-11-17T10:00:04.500Z","message":{"id":"msg_s2","model":"fake-model","stop_reason":"tool_use","usage":{"input_tokens":5,"output_tokens":3,"cache_read_input_tokens":50,"cache_creation_input_tokens":0},"content":[{"type":"tool_use","id":"toolu_s2","name":"Read","input":{"file_path":"src/main.ts"}}]}}

@@ -1,0 +1,7 @@
+{"type":"user","timestamp":"2026-11-17T10:00:00.000Z","cwd":"C:\\fake\\a","gitBranch":"main","message":{"role":"user","content":"synthetic prompt"}}
+{"type":"assistant","timestamp":"2026-11-17T10:00:01.000Z","message":{"id":"msg_1","model":"fake-model","stop_reason":"tool_use","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":100,"cache_creation_input_tokens":0},"content":[{"type":"tool_use","id":"toolu_e1","name":"Edit","input":{"file_path":"src/app.ts","old_string":"a","new_string":"b"}}]}}
+{"type":"user","timestamp":"2026-11-17T10:00:02.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_e1","content":"ok"}]}}
+{"type":"assistant","timestamp":"2026-11-17T10:00:03.000Z","message":{"id":"msg_2","model":"fake-model","stop_reason":"tool_use","usage":{"input_tokens":12,"output_tokens":6,"cache_read_input_tokens":100,"cache_creation_input_tokens":0},"content":[{"type":"tool_use","id":"toolu_b1","name":"Bash","input":{"command":"npm test -- --run","description":"run tests"}}]}}
+{"type":"user","timestamp":"2026-11-17T10:00:04.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_b1","content":"pass"}]}}
+{"type":"assistant","timestamp":"2026-11-17T10:00:05.000Z","message":{"id":"msg_3","model":"fake-model","stop_reason":"end_turn","usage":{"input_tokens":14,"output_tokens":4,"cache_read_input_tokens":100,"cache_creation_input_tokens":0},"content":[{"type":"text","text":"done"}]}}
+{"type":"system","subtype":"stop_hook_summary","timestamp":"2026-11-17T10:00:06.000Z"}

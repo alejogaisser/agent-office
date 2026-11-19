@@ -1,0 +1,6 @@
+{"type":"user","timestamp":"2026-11-17T10:00:00.000Z","message":{"role":"user","content":"valid one"}}
+{"type":"totally-new-type","timestamp":"2026-11-17T10:00:01.000Z","payload":{"x":1}}
+{this is not json
+{"type":"assistant","timestamp":"2026-11-17T10:00:02.000Z"}
+{"type":"assistant","timestamp":"2026-11-17T10:00:03.000Z","message":{"id":"msg_9","stop_reason":"tool_use","content":[{"type":"tool_use","id":"toolu_r1","name":"Read","input":{"file_path":"notes.txt"}}]}}
+{"type":"system","subtype":"stop_hook_summary","timestamp":"2026-11-17T10:00:04.000Z"}

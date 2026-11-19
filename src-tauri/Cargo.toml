@@ -1,0 +1,19 @@
+[package]
+name = "agent-office"
+version = "0.1.0"
+description = "Isometric 3D office for your Claude Code sessions"
+edition = "2021"
+
+[lib]
+name = "agent_office_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+notify = "8"
+office-core = { path = "../crates/office-core" }
